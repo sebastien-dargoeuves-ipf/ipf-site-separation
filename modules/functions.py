@@ -161,7 +161,7 @@ def update_attributes(ipf: IPFClient, devices: list):
     """
 
     if not devices:
-        print("No device matching - no attribute to update")
+        logger.info("No device matching - no attribute to update")
         return False
     if typer.confirm(
         "(Recommended) Do you want to update global attributes?", default=True
@@ -172,13 +172,13 @@ def update_attributes(ipf: IPFClient, devices: list):
             for d in devices
         ]
         request_update_attributes = ipf_attributes.set_sites_by_sn(attributes_list)
-        print(
+        logger.info(
             f"Global Attributes 'siteName' has been updated for {len(request_update_attributes)} devices"
         )
     if typer.confirm("(Optional) Do you want to update local attributes?"):
         ipf_attributes = Attributes(client=ipf, snapshot_id="$last")
         ipf_attributes.update_local_attr_from_global()
-        print("Local Attributes updated for $last snapshot")
+        logger.info("Local Attributes updated for $last snapshot")
     return True
 
 
@@ -238,7 +238,7 @@ def f_snow_site_sep(settings: Settings, update_ipf: bool):
 
     matched_devices, not_found_devices = match_ipf_with_snow(snow_devices, ipf_devices)
     if not update_ipf:
-        print("Dry run mode enabled, no data will be pushed to IP Fabric")
+        logger.info("Dry run mode enabled, no data will be pushed to IP Fabric")
         export_to_csv(
             matched_devices,
             "matched_devices.csv",
