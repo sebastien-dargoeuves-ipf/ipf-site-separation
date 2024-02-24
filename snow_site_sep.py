@@ -43,7 +43,7 @@ def snow(
         update_ipf: A boolean indicating whether to update IP Fabric attributes or not.
     """
     if f_snow_site_sep(settings, update_ipf):
-        logger.info("'snow' task completed successfully")
+        logger.info("'snow' task completed")
     else:
         logger.warning("'snow' task failed")
 
@@ -62,7 +62,7 @@ def catch_all_cleanup(
         update_ipf: A boolean indicating whether to update IP Fabric attributes or not.
     """
     if f_ipf_catch_all(settings, update_ipf):
-        logger.info("'catch_all' task completed successfully")
+        logger.info("'catch_all' task completed")
     else:
         logger.warning("'catch_all' task failed")
 
