@@ -14,6 +14,7 @@ from modules.classDefinitions import Settings
 def search_site(
     ipf: IPFClient,
     ip: str,
+    all_devices: list,
     catch_all_str: str,
     search_network_prefix: int,
     multi_site_str_limit: int,
@@ -37,13 +38,24 @@ def search_site(
     ip = ipaddress.IPv4Address(ip)
     ip_network = ipaddress.IPv4Network(ip).supernet(new_prefix=search_network_prefix)
 
+    # for device in all_devices:
+    #     if ipaddress.IPv4Address(device["loginIp"]) in ip_network:
+    #         return device["siteName"]
+
+    # sites = {
+    #     site["siteName"]
+    #     for site in ipf.inventory.devices.all(
+    #         filters={"loginIp": ["cidr", str(ip_network)]},
+    #         columns=["siteName"],
+    #     )
+    # }
+
     sites = {
-        site["siteName"]
-        for site in ipf.inventory.devices.all(
-            filters={"loginIp": ["cidr", str(ip_network)]},
-            columns=["siteName"],
-        )
+        device["siteName"]
+        for device in all_devices
+        if ipaddress.IPv4Address(device["loginIp"]) in ip_network
     }
+
     if catch_all_str in sites:
         sites.remove(catch_all_str)
     if len(sites) == 1:
@@ -239,16 +251,8 @@ def f_snow_site_sep(settings: Settings, update_ipf: bool):
     matched_devices, not_found_devices = match_ipf_with_snow(snow_devices, ipf_devices)
     if not update_ipf:
         logger.info("Dry run mode enabled, no data will be pushed to IP Fabric")
-        export_to_csv(
-            matched_devices,
-            "matched_devices.csv",
-            "File `matched_devices.csv` saved",
-        )
-        export_to_csv(
-            not_found_devices,
-            "not_found_devices.csv",
-            "File `not_found_devices.csv` saved",
-        )
+        export_to_csv(matched_devices, "matched_devices.csv")
+        export_to_csv(not_found_devices, "not_found_devices.csv")
     else:
         update_attributes(ipf, matched_devices)
 
@@ -266,12 +270,16 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
         filters={"siteName": ["eq", settings.CATCH_ALL]},
         columns=["hostname", "loginIp", "sn", "model"],
     )
+    all_devices = ipf.inventory.devices.all(
+        columns=["hostname", "loginIp", "sn", "model", "siteName"],
+    )
 
     progress_bar = tqdm(total=len(catch_all_devices), desc="Processing Devices")
     for device in catch_all_devices:
         device["siteName"] = search_site(
             ipf,
             device["loginIp"],
+            all_devices,
             settings.CATCH_ALL,
             settings.SEARCH_NETWORK_PREFIX,
             settings.MULTI_SITE_LIMIT,
@@ -280,14 +288,13 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
         progress_bar.update(1)
     progress_bar.close()
     if not update_ipf:
-        df = pd.DataFrame(catch_all_devices)
-        df.to_csv("catch_all_devices.csv", index=False)
+        export_to_csv(catch_all_devices, "catch_all_devices.csv")
     else:
         update_attributes(ipf, catch_all_devices)
     return True
 
 
-def export_to_csv(list, filename, message):
+def export_to_csv(list, filename):
     """
     Exports a list of dictionaries to a CSV file using pandas, logs a message using the logger, and returns the resulting DataFrame.
 
@@ -301,5 +308,5 @@ def export_to_csv(list, filename, message):
     """
     result = pd.DataFrame(list)
     result.to_csv(filename, index=False)
-    logger.info(message)
+    logger.info(f'File `{filename}` saved')
     return result
