@@ -21,6 +21,10 @@ pip install -r requirements.txt
 
 ## Usage
 
+### ServiceNow info for Site Separation
+
+Using the `snow` option, you can set up the SiteSeparation in IP Fabric to follow the location in ServiceNow. The matching will be done based on the hostname.
+
 To run the script in dry run mode (default), which fetches and matches the device information but does not update IP Fabric:
 
 ```bash
@@ -34,6 +38,13 @@ To update the global and local attributes in IP Fabric with the matched device i
 ```bash
 python snow_site_sep.py snow --update-ipf
 ```
+
+### CatchAll Remediation
+
+Using the `catch_all` option, you can search within IP Fabric for devices currently assigned to `_catch_all_`, and
+if the subnet of the management IP matches the IP of other devices with an allocated site, the script will update
+the siteName of the devices.
+If there are multiple matches, it will be listed as `_fixme_XXXX`
 
 ## Environment Variables
 
