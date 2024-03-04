@@ -46,6 +46,12 @@ if the subnet of the management IP matches the IP of other devices with an alloc
 the siteName of the devices.
 If there are multiple matches, it will be listed as `_fixme_XXXX`
 
+To update the global and local attributes in IP Fabric with the matched device information:
+
+```bash
+python snow_site_sep.py catch_all --update-ipf
+```
+
 ## Environment Variables
 
 The script requires the following environment variables:
