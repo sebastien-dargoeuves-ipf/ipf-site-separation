@@ -39,14 +39,19 @@ To update the global and local attributes in IP Fabric with the matched device i
 python snow_site_sep.py snow --update-ipf
 ```
 
-### CatchAll Remediation
+### CatchAll Remediation (no ServiceNow information required)
 
-Using the `catch_all` option, you can search within IP Fabric for devices currently assigned to `_catch_all_`, and
-if the subnet of the management IP matches the IP of other devices with an allocated site, the script will update
-the siteName of the devices.
-If there are multiple matches, it will be listed as `_fixme_XXXX`
+Using the `catch_all` option, you can search within IP Fabric for devices currently assigned to the `CATCH_ALL` site.
+If the subnet, based on `SEARCH_NETWORK_PREFIX` prefix length, of the management IP matches the subnet of other devices with an allocated site, the script will update the siteName of the devices.
+If there are none or multiple matches, it will be listed with the `PREFIX_FIXME`
 
-To update the global and local attributes in IP Fabric with the matched device information:
+```bash
+python snow_site_sep.py catch_all
+```
+
+In dry run mode, the script saves the result to `catch_all_remediation.csv`.
+
+To update the global and/or local attributes in IP Fabric with the matched device information:
 
 ```bash
 python snow_site_sep.py catch_all --update-ipf

@@ -146,7 +146,7 @@ def match_ipf_with_snow(snow_devices, ipf_devices):
     return matched_devices, not_found_devices
 
 
-def update_attributes(ipf: IPFClient, devices: list):
+def update_attributes(ipf_client: IPFClient, devices: list, settings: Settings):
     """
     Updates attributes in IPF based on the devices provided.
 
@@ -164,22 +164,39 @@ def update_attributes(ipf: IPFClient, devices: list):
     if not devices:
         logger.info("No device matching - no attribute to update")
         return False
-    if typer.confirm(
-        "(Recommended) Do you want to update global attributes?", default=True
-    ):
-        ipf_attributes = Attributes(client=ipf)
-        attributes_list = [
-            {"sn": d["sn"], "value": d.get("snow_location") or d.get("siteName")}
-            for d in devices
-        ]
+    
+    update_global_attributes = False
+    update_local_attributes = False
+
+    if typer.confirm("(Recommended) Do you want to update global attributes?", default=True):
+        update_global_attributes = True
+    
+    if typer.confirm(f"(Optional) Do you want to update local attributes? It will recalculate siteSeparation for snapshot `{settings.IPF_SNAPSHOT_ID}`"):
+        update_local_attributes = True
+
+    # if typer.confirm("Do you want to remove the Rules for SiteSeparation?", default=True):
+    #     remove_site_separation_rules = True
+    
+    attributes_list = [
+        {"sn": d["sn"], "value": d.get("snow_location") or d.get("siteName")}
+        for d in devices
+    ]
+    
+    if update_global_attributes:
+        ipf_attributes = Attributes(client=ipf_client)
         request_update_attributes = ipf_attributes.set_sites_by_sn(attributes_list)
         logger.info(
             f"Global Attributes 'siteName' has been updated for {len(request_update_attributes)} devices"
         )
-    if typer.confirm("(Optional) Do you want to update local attributes?"):
-        ipf_attributes = Attributes(client=ipf, snapshot_id="$last")
-        ipf_attributes.update_local_attr_from_global()
-        logger.info("Local Attributes updated for $last snapshot")
+
+    if update_local_attributes:
+        ipf_attributes = Attributes(client=ipf_client, snapshot_id=settings.IPF_SNAPSHOT_ID)
+        request_update_attributes = ipf_attributes.set_sites_by_sn(attributes_list)
+        ipf_attributes.set_sites_by_sn(attributes_list)
+        logger.info(
+            f"Local Attributes 'siteName' has been updated for {len(request_update_attributes)} devices"
+        )
+        
     return True
 
 
@@ -243,7 +260,7 @@ def f_snow_site_sep(settings: Settings, update_ipf: bool):
         export_to_csv(matched_devices, settings.IPF_SNOW_MATCHED_FILENAME)
         export_to_csv(not_found_devices, settings.IPF_SNOW_NOT_MATCHED_FILENAME)
     else:
-        update_attributes(ipf_client, matched_devices)
+        update_attributes(ipf_client, matched_devices, settings)
 
     return True
 
@@ -274,7 +291,7 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
     if not update_ipf:
         export_to_csv(catch_all_devices, settings.CATCH_ALL_FILENAME)
     else:
-        update_attributes(ipf_client, catch_all_devices)
+        update_attributes(ipf_client, catch_all_devices, settings)
     return True
 
 
