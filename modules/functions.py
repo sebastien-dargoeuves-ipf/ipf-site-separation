@@ -12,7 +12,6 @@ from modules.classDefinitions import Settings
 
 
 def search_site(
-    ipf: IPFClient,
     ip: str,
     all_devices: list,
     catch_all_str: str,
@@ -31,24 +30,12 @@ def search_site(
         The name of the site associated with the IP address.
 
     Examples:
-        >>> search_site(ipf, "192.168.0.1")
+        >>> search_site("192.168.0.1")
         'SiteA'
     """
 
     ip = ipaddress.IPv4Address(ip)
     ip_network = ipaddress.IPv4Network(ip).supernet(new_prefix=search_network_prefix)
-
-    # for device in all_devices:
-    #     if ipaddress.IPv4Address(device["loginIp"]) in ip_network:
-    #         return device["siteName"]
-
-    # sites = {
-    #     site["siteName"]
-    #     for site in ipf.inventory.devices.all(
-    #         filters={"loginIp": ["cidr", str(ip_network)]},
-    #         columns=["siteName"],
-    #     )
-    # }
 
     sites = {
         device["siteName"]
@@ -69,12 +56,12 @@ def search_site(
     return f"{prefix_fixme}no_site_found"
 
 
-def get_snow_device_list(sn_client):
+def get_snow_device_list(snow_client):
     """
     Retrieves a list of devices from ServiceNow along with their associated information.
 
     Args:
-        sn_client: An instance of the ServiceNow client.
+        snow_client: An instance of the ServiceNow client.
 
     Returns:
         A list of dictionaries, each containing the following device information:
@@ -85,10 +72,12 @@ def get_snow_device_list(sn_client):
     """
 
     cmdb_table_devices = "cmdb_ci_netgear"
-    full_snow_devices = sn_client.request_client.get_all_records(cmdb_table_devices)
+    full_snow_devices = snow_client.request_client.get_all_records(cmdb_table_devices)
 
     cmdb_table_locations = "cmn_location"
-    full_snow_locations = sn_client.request_client.get_all_records(cmdb_table_locations)
+    full_snow_locations = snow_client.request_client.get_all_records(
+        cmdb_table_locations
+    )
     location_dict = {
         loc["sys_id"]: loc["name"] for loc in full_snow_locations["result"]
     }
@@ -240,44 +229,39 @@ def f_snow_site_sep(settings: Settings, update_ipf: bool):
     Returns:
         True if the process is completed successfully.
     """
-    sn_client = initiate_snow(settings)
-    snow_devices = get_snow_device_list(sn_client)
+    snow_client = initiate_snow(settings)
+    snow_devices = get_snow_device_list(snow_client)
 
-    ipf = initiate_ipf(settings)
-    ipf_devices = ipf.inventory.devices.all(
+    ipf_client = initiate_ipf(settings)
+    ipf_devices = ipf_client.inventory.devices.all(
         columns=["hostname", "loginIp", "sn", "siteName"]
     )
 
     matched_devices, not_found_devices = match_ipf_with_snow(snow_devices, ipf_devices)
     if not update_ipf:
         logger.info("Dry run mode enabled, no data will be pushed to IP Fabric")
-        export_to_csv(matched_devices, "matched_devices.csv")
-        export_to_csv(not_found_devices, "not_found_devices.csv")
+        export_to_csv(matched_devices, settings.IPF_SNOW_MATCHED_FILENAME)
+        export_to_csv(not_found_devices, settings.IPF_SNOW_NOT_MATCHED_FILENAME)
     else:
-        update_attributes(ipf, matched_devices)
+        update_attributes(ipf_client, matched_devices)
 
     return True
 
 
 def f_ipf_catch_all(settings: Settings, update_ipf: bool):
 
-    ipf = IPFClient(
-        base_url=settings.IPF_URL,
-        auth=settings.IPF_TOKEN,
-        snapshot_id=settings.IPF_SNAPSHOT_ID,
-    )
-    catch_all_devices = ipf.inventory.devices.all(
+    ipf_client = initiate_ipf(settings)
+    catch_all_devices = ipf_client.inventory.devices.all(
         filters={"siteName": ["eq", settings.CATCH_ALL]},
         columns=["hostname", "loginIp", "sn", "model"],
     )
-    all_devices = ipf.inventory.devices.all(
+    all_devices = ipf_client.inventory.devices.all(
         columns=["hostname", "loginIp", "sn", "model", "siteName"],
     )
 
     progress_bar = tqdm(total=len(catch_all_devices), desc="Processing Devices")
     for device in catch_all_devices:
         device["siteName"] = search_site(
-            ipf,
             device["loginIp"],
             all_devices,
             settings.CATCH_ALL,
@@ -288,9 +272,9 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
         progress_bar.update(1)
     progress_bar.close()
     if not update_ipf:
-        export_to_csv(catch_all_devices, "catch_all_devices.csv")
+        export_to_csv(catch_all_devices, settings.CATCH_ALL_FILENAME)
     else:
-        update_attributes(ipf, catch_all_devices)
+        update_attributes(ipf_client, catch_all_devices)
     return True
 
 
@@ -308,5 +292,5 @@ def export_to_csv(list, filename):
     """
     result = pd.DataFrame(list)
     result.to_csv(filename, index=False)
-    logger.info(f'File `{filename}` saved')
+    logger.info(f"File `{filename}` saved")
     return result

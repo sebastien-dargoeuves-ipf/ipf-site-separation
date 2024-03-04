@@ -29,3 +29,7 @@ class Settings(BaseSettings):
     PREFIX_FIXME: str = "_fixme_"
     SEARCH_NETWORK_PREFIX: int = 24
     MULTI_SITE_LIMIT: int = 50  # max length of the new siteName
+
+    IPF_SNOW_MATCHED_FILENAME: str = "ipf_devices_found_in_snow.csv"
+    IPF_SNOW_NOT_MATCHED_FILENAME: str = "ipf_devices_not_found_in_snow.csv"
+    CATCH_ALL_FILENAME: str = "catch_all_remediation.csv"
