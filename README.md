@@ -76,6 +76,7 @@ python snow_site_sep.py subnet <name-of-subnet-file.json> --update-ipf
 The source file needs to be constructed like this:
 
 ```json
+[
     {
         "name": "SiteA",
         "subnet": "10.194.56.64/28"
