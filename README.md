@@ -28,7 +28,7 @@ Using the subnet option, you can search for all devices with a login IP. If this
 python snow_site_sep.py subnet <name-of-subnet-file.json>
 ```
 
-In dry run mode, the script saves the result to `catch_all_remediation.csv`.
+In dry run mode, the script saves the result to `subnets_site_separation.csv`.
 
 To update the global and/or local attributes in IP Fabric with the matched device information:
 
