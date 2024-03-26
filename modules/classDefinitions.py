@@ -33,3 +33,4 @@ class Settings(BaseSettings):
     IPF_SNOW_MATCHED_FILENAME: str = "ipf_devices_found_in_snow.csv"
     IPF_SNOW_NOT_MATCHED_FILENAME: str = "ipf_devices_not_found_in_snow.csv"
     CATCH_ALL_FILENAME: str = "catch_all_remediation.csv"
+    SUBNET_SITESEP_FILENAME: str = "subnets_site_separation.csv"
