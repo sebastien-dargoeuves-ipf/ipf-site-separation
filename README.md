@@ -59,9 +59,6 @@ The source file needs to be constructed like this:
 
 The script requires the following environment variables:
 
-- `SNOW_USER`: The username for ServiceNow.
-- `SNOW_PASS`: The password for ServiceNow.
-- `SNOW_URL`: The URL of the ServiceNow instance.
 - `IPF_URL`: The URL of the IP Fabric instance.
 - `IPF_TOKEN`: The API token for IP Fabric.
 - `IPF_SNAPSHOT`: The snapshot ID in IP Fabric. Defaults to `$last`.
