@@ -4,7 +4,7 @@ import typer
 from loguru import logger
 
 from modules.classDefinitions import Settings
-from modules.functions import f_ipf_catch_all, f_snow_site_sep
+from modules.functions import f_ipf_catch_all, f_snow_site_sep, f_ipf_subnet
 
 settings = Settings()
 app = typer.Typer(
@@ -65,6 +65,35 @@ def catch_all_cleanup(
         logger.info("'catch_all' task completed")
     else:
         logger.warning("'catch_all' task failed")
+
+@app.command("subnet", help="Build Site Separation based on Subnet")
+def subnet(
+    subnet_source: typer.FileText = typer.Argument(
+        ...,
+        help="The file containing the subnet information.",
+    ),
+    update_ipf: bool = typer.Option(
+        False,
+        help="Dry Mode is default, if this option is enabled, it will update IP Fabric Attributes",
+    ),
+):
+    """
+    Cleans up devices with the _catch_all_ site in IP Fabric by updating their siteName attribute in IP Fabric.
+
+    Args:
+        update_ipf: A boolean indicating whether to update IP Fabric attributes or not.
+    """
+    import json
+    try:
+        subnet_data = json.load(subnet_source)
+    except Exception as e:
+        logger.error(f"Error loading file `{subnet_source}`, not a valid json. Error: {e}")
+        return
+    
+    if f_ipf_subnet(settings, subnet_data, update_ipf):
+        logger.info("'Subnet Site Separation' task completed")
+    else:
+        logger.warning("'Subnet Site Separation' task failed")
 
 
 if __name__ == "__main__":
