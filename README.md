@@ -1,6 +1,6 @@
-# IP Fabric and ServiceNow Integration
+# IP Fabric and Site Separation
 
-This script provides a command-line interface (CLI) to integrate IP Fabric with ServiceNow. It fetches device information from both IP Fabric and ServiceNow, matches the devices based on their hostnames, and optionally updates the global and local attributes in IP Fabric.
+This script provides a command-line interface (CLI) to build Site Separation in IP Fabric, based on the loginIP of all IP Fabric's devices.
 
 ## Requirements
 
@@ -8,7 +8,6 @@ This script provides a command-line interface (CLI) to integrate IP Fabric with 
 - typer
 - pandas
 - ipfabric
-- ipfabric_snow
 
 ## Installation
 
@@ -20,42 +19,6 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-
-### ServiceNow info for Site Separation
-
-Using the `snow` option, you can set up the SiteSeparation in IP Fabric to follow the location in ServiceNow. The matching will be done based on the hostname.
-
-To run the script in dry run mode (default), which fetches and matches the device information but does not update IP Fabric:
-
-```bash
-python snow_site_sep.py snow
-```
-
-In dry run mode, the script saves the matched and not found devices to `matched_devices.csv` and `not_found_devices.csv` respectively.
-
-To update the global and local attributes in IP Fabric with the matched device information:
-
-```bash
-python snow_site_sep.py snow --update-ipf
-```
-
-### CatchAll Remediation (no ServiceNow information required)
-
-Using the `catch_all` option, you can search within IP Fabric for devices currently assigned to the `CATCH_ALL` site.
-If the subnet, based on `SEARCH_NETWORK_PREFIX` prefix length, of the management IP matches the subnet of other devices with an allocated site, the script will update the siteName of the devices.
-If there are none or multiple matches, it will be listed with the `PREFIX_FIXME`
-
-```bash
-python snow_site_sep.py catch_all
-```
-
-In dry run mode, the script saves the result to `catch_all_remediation.csv`.
-
-To update the global and/or local attributes in IP Fabric with the matched device information:
-
-```bash
-python snow_site_sep.py catch_all --update-ipf
-```
 
 ### Use Subnet matching based on source file to define siteSparation
 
