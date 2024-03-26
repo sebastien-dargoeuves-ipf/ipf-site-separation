@@ -4,7 +4,7 @@ import typer
 from loguru import logger
 
 from modules.classDefinitions import Settings
-from modules.functions import f_ipf_catch_all, f_snow_site_sep, f_ipf_subnet
+from modules.functions import f_ipf_subnet
 
 settings = Settings()
 app = typer.Typer(
@@ -27,44 +27,6 @@ def logging_configuration():
         compression="tar.gz",
     )
     logger.info("---- NEW EXECUTION OF SCRIPT ----")
-
-
-@app.command("snow", help="Check information from ServiceNow")
-def snow(
-    update_ipf: bool = typer.Option(
-        False,
-        help="Dry Mode is default, if this option is enabled, it will update IP Fabric Attributes",
-    ),
-):
-    """
-    Executes the site separation process by checking information from ServiceNow and updating IP Fabric attributes if specified.
-
-    Args:
-        update_ipf: A boolean indicating whether to update IP Fabric attributes or not.
-    """
-    if f_snow_site_sep(settings, update_ipf):
-        logger.info("'snow' task completed")
-    else:
-        logger.warning("'snow' task failed")
-
-
-@app.command("catch_all", help="Cleanup the devices with catch_all")
-def catch_all_cleanup(
-    update_ipf: bool = typer.Option(
-        False,
-        help="Dry Mode is default, if this option is enabled, it will update IP Fabric Attributes",
-    ),
-):
-    """
-    Cleans up devices with the _catch_all_ site in IP Fabric by updating their siteName attribute in IP Fabric.
-
-    Args:
-        update_ipf: A boolean indicating whether to update IP Fabric attributes or not.
-    """
-    if f_ipf_catch_all(settings, update_ipf):
-        logger.info("'catch_all' task completed")
-    else:
-        logger.warning("'catch_all' task failed")
 
 @app.command("subnet", help="Build Site Separation based on Subnet")
 def subnet(
