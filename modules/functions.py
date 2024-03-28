@@ -38,7 +38,7 @@ def search_subnet(
             for subnet in subnet_data
             if ip in ipaddress.IPv4Network(subnet["subnet"])
         ),
-        "no_subnet_match",
+        None,
     )
 
 
@@ -88,15 +88,16 @@ def update_attributes(ipf_client: IPFClient, devices: list, settings: Settings):
         ipf_attributes = Attributes(
             client=ipf_client, snapshot_id=settings.IPF_SNAPSHOT_ID
         )
+        clear_local = False
         if all_attributes := ipf_attributes.all():
-            if typer.confirm(
+            if clear_local := typer.confirm(
                 "Do you want to clear local attributes beforehand? If not it will only update the matching entries.",
                 default=True,
             ):
                 ipf_attributes.delete_attribute(*all_attributes)
         request_update_attributes = ipf_attributes.set_sites_by_sn(attributes_list)
         logger.info(
-            f"Local Attributes 'siteName' has been cleared and created for {len(request_update_attributes)} devices"
+            f"Local Attributes 'siteName' has been {'cleared and created' if clear_local else 'updated'} for {len(request_update_attributes)} devices"
         )
 
     return True
@@ -163,19 +164,24 @@ def f_ipf_subnet(settings: Settings, subnet_data: json, update_ipf: bool):
         columns=["hostname", "loginIp", "sn", "model", "siteName"],
     )
 
+    site_separation_devices = []
     progress_bar = tqdm(total=len(devices_with_ip), desc="Processing Devices")
     for device in devices_with_ip:
-        device["siteName"] = search_subnet(
-            device["loginIp"],
-            subnet_data
-        )
+        if new_site := search_subnet(device["loginIp"], subnet_data):
+            site_separation_devices.append(
+                {
+                    "sn": device["sn"],
+                    "siteName": new_site,
+                }
+            )
         progress_bar.update(1)
     progress_bar.close()
     if not update_ipf:
-        export_to_csv(devices_with_ip, settings.SUBNET_SITESEP_FILENAME)
+        export_to_csv(site_separation_devices, settings.SUBNET_SITESEP_FILENAME)
     else:
-        update_attributes(ipf_client, devices_with_ip, settings)
+        update_attributes(ipf_client, site_separation_devices, settings)
     return True
+
 
 
 def export_to_csv(list, filename):
