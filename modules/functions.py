@@ -85,11 +85,18 @@ def update_attributes(ipf_client: IPFClient, devices: list, settings: Settings):
         )
 
     if update_local_attributes:
-        ipf_attributes = Attributes(client=ipf_client, snapshot_id=settings.IPF_SNAPSHOT_ID)
+        ipf_attributes = Attributes(
+            client=ipf_client, snapshot_id=settings.IPF_SNAPSHOT_ID
+        )
+        if all_attributes := ipf_attributes.all():
+            if typer.confirm(
+                "Do you want to clear local attributes beforehand? If not it will only update the matching entries.",
+                default=True,
+            ):
+                ipf_attributes.delete_attribute(*all_attributes)
         request_update_attributes = ipf_attributes.set_sites_by_sn(attributes_list)
-        ipf_attributes.set_sites_by_sn(attributes_list)
         logger.info(
-            f"Local Attributes 'siteName' has been updated for {len(request_update_attributes)} devices"
+            f"Local Attributes 'siteName' has been cleared and created for {len(request_update_attributes)} devices"
         )
 
     return True
