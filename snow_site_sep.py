@@ -66,6 +66,7 @@ def catch_all_cleanup(
     else:
         logger.warning("'catch_all' task failed")
 
+
 @app.command("subnet", help="Build Site Separation based on Subnet")
 def subnet(
     subnet_source: typer.FileText = typer.Argument(
@@ -84,12 +85,15 @@ def subnet(
         update_ipf: A boolean indicating whether to update IP Fabric attributes or not.
     """
     import json
+
     try:
         subnet_data = json.load(subnet_source)
     except Exception as e:
-        logger.error(f"Error loading file `{subnet_source}`, not a valid json. Error: {e}")
+        logger.error(
+            f"Error loading file `{subnet_source}`, not a valid json. Error: {e}"
+        )
         return
-    
+
     if f_ipf_subnet(settings, subnet_data, update_ipf):
         logger.info("'Subnet Site Separation' task completed")
     else:
