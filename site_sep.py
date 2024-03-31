@@ -4,7 +4,13 @@ import typer
 from loguru import logger
 
 from modules.classDefinitions import Settings
-from modules.functions import f_ipf_catch_all, f_snow_site_sep, f_ipf_subnet
+from modules.f_ipf import (
+    f_ipf_catch_all,
+    f_ipf_subnet,
+    f_push_attribute_from_file,
+    f_ipf_report_site_sep,
+)
+from modules.f_snow import f_snow_site_sep
 
 settings = Settings()
 app = typer.Typer(
@@ -82,22 +88,60 @@ def subnet(
     Cleans up devices with the _catch_all_ site in IP Fabric by updating their siteName attribute in IP Fabric.
 
     Args:
-        update_ipf: A boolean indicating whether to update IP Fabric attributes or not.
+        subnet_source.json: A file containing the information about all subnets and their matching siteName.
     """
-    import json
 
-    try:
-        subnet_data = json.load(subnet_source)
-    except Exception as e:
-        logger.error(
-            f"Error loading file `{subnet_source}`, not a valid json. Error: {e}"
-        )
-        return
-
-    if f_ipf_subnet(settings, subnet_data, update_ipf):
+    if f_ipf_subnet(settings, subnet_source, update_ipf):
         logger.info("'Subnet Site Separation' task completed")
     else:
         logger.warning("'Subnet Site Separation' task failed")
+
+
+@app.command("push", help="Push the site separation settings based on a CSV file.")
+def subnet(
+    file_source: typer.FileText = typer.Argument(
+        ...,
+        help="The CSV file containing the new site separation to apply.",
+    ),
+):
+    """
+    Push the site separation settings based on a CSV file by updating their siteName attribute in IP Fabric.
+
+    Args:
+        file.csv: A file containing the new site separation to apply.
+        file.xlsx: A file containing the new site separation to apply.
+    """
+
+    if f_push_attribute_from_file(settings, file_source, True):
+        logger.info("'Push Site Separation from file' task completed")
+    else:
+        logger.warning("'Push Site Separation from file' task failed")
+
+
+@app.command(
+    "report", help="Create a report to find potential mismatch in the site separation"
+)
+def subnet(
+    file_output: str = typer.Argument(
+        ...,
+        help="Name of the file to output the report.",
+    ),
+):
+    """
+    Build a report with the following information:
+
+    | device  | sn  | loginIP | Subnet (based on loginIP & mask) | ipf Site | sites matching the subnet       | suggestedFinalSite | FinalSite |
+    | ------- | --- | ------- | -------------------------------- | -------- | ------------------------------- | ------------------ | --------- |
+    | deviceA | snA | 1.1.1.1 | 1.1.1.0/26                       | site1    | [site1: 30, site2:50, site3:20] | site2              |           |
+
+    Args:
+        file_output.csv: A file where to write the report.
+    """
+
+    if f_ipf_report_site_sep(settings, file_output):
+        logger.info("'Report Site Separation' task completed")
+    else:
+        logger.warning("'Report Site Separation' task failed")
 
 
 if __name__ == "__main__":
