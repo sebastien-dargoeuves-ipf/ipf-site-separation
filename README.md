@@ -1,6 +1,11 @@
-# IP Fabric and ServiceNow Integration
+# IP Fabric -- Site Separation Manager
 
-This script provides a command-line interface (CLI) to integrate IP Fabric with ServiceNow. It fetches device information from both IP Fabric and ServiceNow, matches the devices based on their hostnames, and optionally updates the global and local attributes in IP Fabric.
+This script provides a command-line interface (CLI) to help manage the Site Separation in IP Fabric:
+
+- snow: fetches device information from both IP Fabric and ServiceNow, matches the devices based on their hostnames, and optionally updates the global and local attributes in IP Fabric.
+- catch_all: check for all devices in a specific catch_all site name, and try to match those devices with devices already assigned to a site, based on the loginIp.
+- subnet: using on a provided JSON file containing a list of dictionnary, like this `[{'subnet': 'siteName'}, ...]`, the site separation will be done based on the match between loginIP and the subnets from the JSON file
+- push: takes one of the generated file, or aa manually created site with the correct structure, and push this as a site separation.
 
 ## Requirements
 
@@ -90,6 +95,12 @@ The source file needs to be constructed like this:
         "subnet": "10.194.56.96/28"
     }
 ]
+```
+
+### Use push to build site separation based on a csv file
+
+```bash
+python snow_site_sep.py push <site_separation_to_push.csv>
 ```
 
 ## Environment Variables
