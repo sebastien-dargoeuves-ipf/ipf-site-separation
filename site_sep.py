@@ -1,9 +1,9 @@
 import os
+import sys
 
 import typer
 from loguru import logger
 
-from modules.classDefinitions import Settings
 from modules.f_ipf import (
     f_ipf_catch_all,
     f_ipf_report_site_sep,
@@ -11,6 +11,7 @@ from modules.f_ipf import (
     f_push_attribute_from_file,
 )
 from modules.f_snow import f_snow_site_sep
+from modules.settings import Settings
 
 settings = Settings()
 app = typer.Typer(
@@ -21,6 +22,15 @@ app = typer.Typer(
 
 @app.callback()
 def logging_configuration():
+    """
+    Configures logging settings for the script execution.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
     root_dir = os.path.dirname(os.path.abspath(__file__))
     default_log_dir = os.path.join(root_dir, "logs")
     os.makedirs(default_log_dir, exist_ok=True)
@@ -35,7 +45,7 @@ def logging_configuration():
     logger.info("---- NEW EXECUTION OF SCRIPT ----")
 
 
-@app.command("snow", help="Check information from ServiceNow")
+@app.command("snow", help="Build Site Separation using ServiceNow data.")
 def snow(
     update_ipf: bool = typer.Option(
         False,
@@ -54,7 +64,10 @@ def snow(
         logger.warning("'snow' task failed")
 
 
-@app.command("catch_all", help="Cleanup the devices with catch_all")
+@app.command(
+    "catch_all",
+    help="Cleanup the devices belonging to a `catch_all` site, specified in settings.py",
+)
 def catch_all_cleanup(
     update_ipf: bool = typer.Option(
         False,
@@ -73,11 +86,11 @@ def catch_all_cleanup(
         logger.warning("'catch_all' task failed")
 
 
-@app.command("subnet", help="Build Site Separation based on Subnet")
+@app.command("subnet", help="Build Site Separation based on Subnet data provided in a json file.")
 def subnet(
     subnet_source: typer.FileText = typer.Argument(
         ...,
-        help="The file containing the subnet information.",
+        help="The file containing the subnet information: [{name: 'site1', subnet: '1.1.1.0/24'}, ...]",
     ),
     update_ipf: bool = typer.Option(
         False,
@@ -97,7 +110,7 @@ def subnet(
         logger.warning("'Subnet Site Separation' task failed")
 
 
-@app.command("push", help="Push the site separation settings based on a CSV file.")
+@app.command("push", help="Update the site separation settings based on a CSV file.")
 def subnet(
     file_source: typer.FileText = typer.Argument(
         ...,
@@ -119,7 +132,7 @@ def subnet(
 
 
 @app.command(
-    "report", help="Create a report to find potential mismatch in the site separation"
+    "report", help="Create a report to find potential gaps in the Site Separation."
 )
 def report(
     file_output: str = typer.Argument(
@@ -135,7 +148,7 @@ def report(
     | deviceA | snA | 1.1.1.1 | 1.1.1.0/26                       | site1    | [site1: 30, site2:50, site3:20] | site2              |           |
 
     Args:
-        file_output.csv: A file where to write the report.
+        file_output: the (Excel) file where the report will be written.
     """
 
     if f_ipf_report_site_sep(settings, file_output):
@@ -147,10 +160,3 @@ def report(
 if __name__ == "__main__":
     app()
 
-
-"""
-# Delete local attributes
-ipf_attributes = Attributes(client=ipf, snapshot_id="$last")
-local_attrs = ipf_attributes.all()
-ipf_attributes.delete_attribute(*local_attrs)
-"""
