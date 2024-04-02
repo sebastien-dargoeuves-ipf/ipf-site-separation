@@ -10,7 +10,7 @@ from ipfabric.settings import Attributes
 from loguru import logger
 from tqdm import tqdm
 
-from modules.classDefinitions import Settings
+from modules.settings import Settings
 from modules.utils import (
     create_site_sep_report,
     export_to_csv,
@@ -133,7 +133,9 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
     progress_bar.close()
     if not update_ipf:
         export_to_csv(
-            catch_all_devices, settings.CATCH_ALL_FILENAME, settings.OUTPUT_FOLDER
+            list=catch_all_devices,
+            filename=settings.CATCH_ALL_FILENAME,
+            output_folder=settings.OUTPUT_FOLDER,
         )
     else:
         update_attributes(ipf_client, catch_all_devices, settings)
@@ -165,9 +167,9 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, update_ipf: bool):
     progress_bar.close()
     if not update_ipf:
         export_to_csv(
-            site_separation_devices,
-            settings.SUBNET_SITESEP_FILENAME,
-            settings.OUTPUT_FOLDER,
+            list=site_separation_devices,
+            filename=settings.SUBNET_SITESEP_FILENAME,
+            output_folder=settings.OUTPUT_FOLDER,
         )
     else:
         update_attributes(ipf_client, site_separation_devices, settings)
@@ -190,9 +192,9 @@ def f_push_attribute_from_file(
     ipf_client = initiate_ipf(settings)
     if not update_ipf:
         return export_to_csv(
-            site_separation_json,
-            settings.IMPORT_SITESEP_FILENAME,
-            settings.OUTPUT_FOLDER,
+            list=site_separation_json,
+            filename=settings.IMPORT_SITESEP_FILENAME,
+            output_folder=settings.OUTPUT_FOLDER,
         )
     else:
         return update_attributes(ipf_client, site_separation_json, settings)
@@ -246,7 +248,7 @@ def f_ipf_report_site_sep(settings: Settings, file_output: str):
         spinner.ok("✅ ")
 
     # Generate report
-    logger.info("Info collected, starting report generation...")
+    logger.info("Data collected, ready to start generating the report.")
     devices_report = create_site_sep_report(ipf_devices, managed_ip_addresses)
 
-    return export_to_excel(devices_report, file_output, settings.OUTPUT_FOLDER)
+    return export_to_excel(devices_report, file_output, settings.REPORT_FOLDER)

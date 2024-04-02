@@ -181,7 +181,7 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
             A list of dictionaries representing IPF devices with the management subnet information added.
         """
         # Convert Managed IP table to dict with devices as keys and IP addresses to IP objects
-        logger.info(
+        logger.debug(
             "Converting Managed IP table to dict with devices as keys and IP addresses to IP objects"
         )
         mip_dict = {}
@@ -193,14 +193,14 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
                 mip_dict[mip["hostname"]].append(mip)
             else:
                 mip_dict[mip["hostname"]] = [mip]
-        logger.info("Converting IP addresses in Device Inventory to IP objects")
+        logger.debug("Converting IP addresses in Device Inventory to IP objects")
         for device in ipf_devices:
             device["loginIp"] = (
                 ipaddress.IPv4Address(device["loginIp"]) if device["loginIp"] else None
             )
 
         # Find the management subnet for each device
-        logger.info(
+        logger.debug(
             "Finding the management subnet for each device, using loginIp and Managed IP table"
         )
         for device in ipf_devices:
@@ -232,7 +232,7 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
         site_entry_count = defaultdict(lambda: defaultdict(int))
 
         # Count the number of devices for each site in each subnet
-        logger.info("Counting the number of devices for each site in each subnet")
+        logger.debug("Counting the number of devices for each site in each subnet")
         for entry in devices_report:
             site_name = entry["siteName"]
             if entry["net"] in [MSG_NO_LOGINIP, MSG_SUBNET_NOT_FOUND]:
@@ -241,7 +241,7 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
             site_entry_count[net][site_name] += 1
 
         subnet_report = {}
-        logger.info("Calculating the entry statistics for each subnet")
+        logger.debug("Calculating the entry statistics for each subnet")
         for subnet, sites in site_entry_count.items():
             entry_stats = {
                 net: {
@@ -277,10 +277,11 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
         return ""
 
     # Find the management subnet for each device
+    logger.info("Finding the management subnet for each device...")
     devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
     # Create the table containing all sites for each management subnet
     subnet_site_report = create_subnet_site_report(devices_report)
-
+    logger.info("... and putting the data together")
     for device in devices_report:
         device["matchingSites"] = subnet_site_report.get(device["net"])
         device["suggestedFinalSite"] = suggested_final_site(device["matchingSites"])

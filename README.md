@@ -12,8 +12,10 @@ This script provides a command-line interface (CLI) to help manage the Site Sepa
 - Python 3.8 or higher
 - typer
 - pandas
+- openpyxl (for Excel reports)
 - ipfabric
 - ipfabric_snow
+- yaspin (optional)
 
 ## Installation
 
@@ -26,10 +28,9 @@ pip install -r requirements.txt
 
 ## Usage
 
-### ServiceNow info for Site Separation
+### `snow` - Build Site Separation using ServiceNow data
 
 Using the `snow` option, you can set up the SiteSeparation in IP Fabric to follow the location in ServiceNow. The matching will be done based on the hostname.
-
 To run the script in dry run mode (default), which fetches and matches the device information but does not update IP Fabric:
 
 ```bash
@@ -44,10 +45,10 @@ To update the global and local attributes in IP Fabric with the matched device i
 python snow_site_sep.py snow --update-ipf
 ```
 
-### CatchAll Remediation (no ServiceNow information required)
+### `catch_all` - Cleanup the devices belonging to a default site, specified in `modules/settings.py`
 
-Using the `catch_all` option, you can search within IP Fabric for devices currently assigned to the `CATCH_ALL` site.
-If the subnet, based on `SEARCH_NETWORK_PREFIX` prefix length, of the management IP matches the subnet of other devices with an allocated site, the script will update the siteName of the devices.
+Using the `catch_all` option, you can search within IP Fabric for devices currently assigned to the `CATCH_ALL` site, defined in the `modules/settings.py` file.
+If the subnet of the management IP, based on `SEARCH_NETWORK_PREFIX` prefix length, matches the subnet of other devices with an allocated site, the script will update the siteName of the devices.
 If there are none or multiple matches, it will be listed with the `PREFIX_FIXME`
 
 ```bash
@@ -62,7 +63,7 @@ To update the global and/or local attributes in IP Fabric with the matched devic
 python snow_site_sep.py catch_all --update-ipf
 ```
 
-### Use Subnet matching based on source file to define siteSparation
+### `subnet` - Build Site Separation based on Subnet data provided in a json file
 
 Using the subnet option, you can search for all devices with a login IP. If this IP is part of a subnet provided in a source file, the script will assign the device to the matching site based on the information in the file.
 
@@ -97,22 +98,35 @@ The source file needs to be constructed like this:
 ]
 ```
 
-### Use push to build site separation based on a csv file
+### `push` - Update the site separation settings based on a CSV file
 
 ```bash
 python snow_site_sep.py push <site_separation_to_push.csv>
 ```
 
+### `report` - Create a report to find potential gaps in the Site Separation
+
+```bash
+python snow_site_sep.py report <specify_report_filename>
+```
+
+Build a report with the following information:
+
+| hostname | loginIp | sn         | siteName | net        | matchingSites                                                                      | suggestedFinalSite | suggested eq IPF Site | finalSite |
+|----------|---------|------------|----------|------------|------------------------------------------------------------------------------------|--------------------|-----------------------|-----------|
+| device1  | 1.1.1.1 | ABCD1234EF | site2    | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | FALSE                 |           |
+| device2  | 1.1.1.2 | ABCD1234EF | site1    | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | TRUE                  |           |
+
 ## Environment Variables
 
-The script requires the following environment variables:
+The script requires the following environment variables, which you will find in the `.env.sample` file:
 
 - `SNOW_USER`: The username for ServiceNow.
 - `SNOW_PASS`: The password for ServiceNow.
 - `SNOW_URL`: The URL of the ServiceNow instance.
 - `IPF_URL`: The URL of the IP Fabric instance.
 - `IPF_TOKEN`: The API token for IP Fabric.
-- `IPF_SNAPSHOT`: The snapshot ID in IP Fabric. Defaults to `$last`.
+- `IPF_SNAPSHOT`: The snapshot ID in IP Fabric. Defaults to `$last`, you can change by specifying `IPF_SNAPSHOT_ID` and the ID of the wanted snapshot.
 
 You can set these environment variables in a `.env` file in the same directory as the script. The script uses the `python-dotenv` package to load these environment variables.
 
