@@ -1,12 +1,15 @@
-import os
 import ipaddress
 import json
+import os
 import sys
 from typing import Union
+
 import pandas as pd
 import typer
-
 from loguru import logger
+
+MSG_NO_LOGINIP = "no loginIp"
+MSG_SUBNET_NOT_FOUND = "subnet not found"
 
 
 def search_site(
@@ -153,9 +156,7 @@ def validate_subnet_data(subnet_data: json) -> bool:
     return True
 
 
-def create_site_sep_report(
-    ipf_devices: list, managed_ip_addresses: list, file_output: str
-) -> bool:
+def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> list:
     """
     Builds a Site Separation report based on the list of devices and their managed IP
 
@@ -165,24 +166,131 @@ def create_site_sep_report(
         file_output: Location where the file will be saved.
 
     Returns:
-        Boolean indicating if the file was saved successfully.
+        Return a list of dictionnary containing the report information for each device.
     """
+
     def find_mgmt_subnet(ipf_devices, managed_ip_addresses):
+        """
+        Finds the management subnet for each device based on the provided IPF devices and managed IP addresses.
+
+        Args:
+            ipf_devices: A list of dictionaries representing IPF devices.
+            managed_ip_addresses: A list of dictionaries representing managed IP addresses.
+
+        Returns:
+            A list of dictionaries representing IPF devices with the management subnet information added.
+        """
+        # Convert Managed IP table to dict with devices as keys and IP addresses to IP objects
+        logger.info(
+            "Converting Managed IP table to dict with devices as keys and IP addresses to IP objects"
+        )
+        mip_dict = {}
+        for mip in managed_ip_addresses:
+            mip["net"] = (
+                ipaddress.IPv4Network(mip["net"], strict=True) if mip["net"] else None
+            )
+            if mip["hostname"] in mip_dict:
+                mip_dict[mip["hostname"]].append(mip)
+            else:
+                mip_dict[mip["hostname"]] = [mip]
+        logger.info("Converting IP addresses in Device Inventory to IP objects")
+        for device in ipf_devices:
+            device["loginIp"] = (
+                ipaddress.IPv4Address(device["loginIp"]) if device["loginIp"] else None
+            )
+
+        # Find the management subnet for each device
+        logger.info(
+            "Finding the management subnet for each device, using loginIp and Managed IP table"
+        )
+        for device in ipf_devices:
+            if not device["loginIp"]:
+                device["net"] = MSG_NO_LOGINIP
+                continue
+            mips = mip_dict.get(device["hostname"], [])
+            for mip in mips:
+                if mip["net"] and device["loginIp"] in mip["net"]:
+                    device["net"] = mip["net"]
+                    break
+            else:
+                device["net"] = MSG_SUBNET_NOT_FOUND
+
+        return ipf_devices
+
+    def create_subnet_site_report(devices_report):
+        """
+        Creates a subnet site report based on the provided report data.
+
+        Args:
+            report: A list of dictionaries representing site entries.
+
+        Returns:
+            A dictionary containing the subnet site report with entry statistics.
+        """
+        from collections import defaultdict
+
+        site_entry_count = defaultdict(lambda: defaultdict(int))
+
+        # Count the number of devices for each site in each subnet
+        logger.info("Counting the number of devices for each site in each subnet")
+        for entry in devices_report:
+            site_name = entry["siteName"]
+            if entry["net"] in [MSG_NO_LOGINIP, MSG_SUBNET_NOT_FOUND]:
+                continue
+            net = entry["net"]
+            site_entry_count[net][site_name] += 1
+
+        subnet_report = {}
+        logger.info("Calculating the entry statistics for each subnet")
+        for subnet, sites in site_entry_count.items():
+            entry_stats = {
+                net: {
+                    "count": count,
+                    "percent": float(f"{count / sum(sites.values()) * 100:.2f}"),
+                }
+                for net, count in sites.items()
+            }
+            subnet_report[subnet] = entry_stats
+
+        return subnet_report
+
+    def suggested_final_site(matching_sites):
+        """
+        Returns the suggested final site based on the matching sites.
+
+        Args:
+            matching_sites: A dictionary containing the matching sites for a subnet.
+
+        Returns:
+            The suggested final site.
+        """
+        if matching_sites:
+            suggested_site = next(
+                (
+                    site
+                    for site, data in matching_sites.items()
+                    if data["percent"] >= 50
+                ),
+                "",
+            )
+            return suggested_site
         return ""
 
-    report = []
-    for device in ipf_devices:
-        d = {
-                "hostname": device["hostname"],
-                "sn": device["sn"],
-                "loginIp": device["loginIp"],
-                "mgmtSubnet": find_mgmt_subnet(ipf_devices, managed_ip_addresses),
-                "siteName": device["siteName"],
+    # Find the management subnet for each device
+    devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
+    # Create the table containing all sites for each management subnet
+    subnet_site_report = create_subnet_site_report(devices_report)
 
-        }
-        report.append(d)
+    for device in devices_report:
+        device["matchingSites"] = subnet_site_report.get(device["net"])
+        device["suggestedFinalSite"] = suggested_final_site(device["matchingSites"])
+        device["suggested eq IPF Site"] = (
+            device["suggestedFinalSite"] == device["siteName"]
+        )
+        device["finalSite"] = ""
 
-    return export_to_csv(report, file_output)
+    return devices_report
+
 
 def file_to_json(input: typer.FileText) -> json:
     try:
@@ -215,6 +323,35 @@ def export_to_csv(list, filename, output_folder) -> bool:
     try:
         result = pd.DataFrame(list)
         result.to_csv(output_file, index=False)
+        logger.info(f"File `{output_file}` saved")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving file `{output_file}`. Error: {e}")
+        return False
+
+
+def export_to_excel(list, filename, output_folder) -> bool:
+    """
+    Exports a list of dictionaries to a CSV file using pandas, logs a message using the logger, and returns the resulting DataFrame.
+
+    Args:
+        list: A list of dictionaries to be exported.
+        filename: The name of the CSV file to be created.
+        output_folder: Location where the file will be saved.
+
+    Returns:
+        Boolean indicating if the file was saved successfully.
+    """
+    if not list:
+        logger.warning("No data to export")
+        return False
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    output_file = f"{output_folder}/{filename}"
+    try:
+        result = pd.DataFrame(list)
+        result.to_excel(output_file, index=False)
         logger.info(f"File `{output_file}` saved")
         return True
     except Exception as e:

@@ -2,14 +2,12 @@
 ServiceNow Functions
 """
 
+from ipfabric_snow.utils.servicenow_client import Snow
 from loguru import logger
 
-from modules.utils import export_to_csv, match_ipf_with_snow
+from modules.classDefinitions import Settings
 from modules.f_ipf import initiate_ipf, update_attributes
-from modules.classDefinitions import Settings
-
-from ipfabric_snow.utils.servicenow_client import Snow
-from modules.classDefinitions import Settings
+from modules.utils import export_to_csv, match_ipf_with_snow
 
 
 def initiate_snow(settings: Settings):
