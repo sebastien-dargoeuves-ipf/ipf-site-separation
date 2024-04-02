@@ -6,16 +6,16 @@ from loguru import logger
 from modules.classDefinitions import Settings
 from modules.f_ipf import (
     f_ipf_catch_all,
+    f_ipf_report_site_sep,
     f_ipf_subnet,
     f_push_attribute_from_file,
-    f_ipf_report_site_sep,
 )
 from modules.f_snow import f_snow_site_sep
 
 settings = Settings()
 app = typer.Typer(
     add_completion=False,
-    pretty_exceptions_show_locals=False,
+    pretty_exceptions_show_locals=True,
 )
 
 
@@ -121,7 +121,7 @@ def subnet(
 @app.command(
     "report", help="Create a report to find potential mismatch in the site separation"
 )
-def subnet(
+def report(
     file_output: str = typer.Argument(
         ...,
         help="Name of the file to output the report.",

@@ -1,4 +1,6 @@
 typer
 pandas
+openpyxl
 ipfabric
 ipfabric_snow
+yaspin

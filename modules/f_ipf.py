@@ -3,22 +3,31 @@ IP Fabric functions
 """
 
 import json
-import typer
-from loguru import logger
-from ipfabric import IPFClient
-from tqdm import tqdm
-from ipfabric.settings import Attributes
 
+import typer
+from ipfabric import IPFClient
+from ipfabric.settings import Attributes
+from loguru import logger
+from tqdm import tqdm
+
+from modules.classDefinitions import Settings
 from modules.utils import (
-    search_site,
-    search_subnet,
+    create_site_sep_report,
     export_to_csv,
-    validate_subnet_data,
+    export_to_excel,
     file_to_json,
     read_site_sep_file,
-    create_site_sep_report,
+    search_site,
+    search_subnet,
+    validate_subnet_data,
 )
-from modules.classDefinitions import Settings
+
+try:
+    from yaspin import yaspin
+
+    YASPIN_ANIMATION = True
+except ImportError:
+    YASPIN_ANIMATION = False
 
 
 def initiate_ipf(settings: Settings):
@@ -189,7 +198,7 @@ def f_push_attribute_from_file(
         return update_attributes(ipf_client, site_separation_json, settings)
 
 
-def f_ipf_report_site_sep(settings: Settings, output_file: str):
+def f_ipf_report_site_sep(settings: Settings, file_output: str):
     """
     Publish a report containing info regarding site separation.
     | device  | sn  | loginIP | Subnet (based on loginIP & mask) | ipf Site | sites matching the subnet       | suggestedFinalSite | FinalSite |
@@ -201,12 +210,43 @@ def f_ipf_report_site_sep(settings: Settings, output_file: str):
         output: the CSV file where to save the report.
     """
 
-    if not output_file.endswith(".csv"):
-        output_file += ".csv"
+    if not file_output.endswith(".xlsx"):
+        file_output += ".xlsx"
 
+    # Initialize IP Fabric client
     ipf_client = initiate_ipf(settings)
+
+    # Collecting Device inventory
+    logger.info("Collecting Device inventory...")
+    if YASPIN_ANIMATION:
+        spinner = yaspin(
+            text="Collecting Device inventory",
+            color="yellow",
+            timer=True,
+        )
+        spinner.start()
+
     ipf_devices = ipf_client.inventory.devices.all(
-        columns=["hostname", "loginIp", "sn", "siteName"]
+        columns=["hostname", "loginIp", "sn", "siteName"],
     )
+    if YASPIN_ANIMATION:
+        spinner.ok("✅ ")
+
+    # Collecting Managed IP table
+    logger.info("Collecting Managed IP table...")
+    if YASPIN_ANIMATION:
+        spinner = yaspin(
+            text="Collecting Managed IP table...",
+            color="yellow",
+            timer=True,
+        )
+        spinner.start()
     managed_ip_addresses = ipf_client.technology.addressing.managed_ip_ipv4.all()
-    return create_site_sep_report(ipf_devices, managed_ip_addresses, output_file)
+    if YASPIN_ANIMATION:
+        spinner.ok("✅ ")
+
+    # Generate report
+    logger.info("Info collected, starting report generation...")
+    devices_report = create_site_sep_report(ipf_devices, managed_ip_addresses)
+
+    return export_to_excel(devices_report, file_output, settings.OUTPUT_FOLDER)
