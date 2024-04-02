@@ -30,8 +30,10 @@ class Settings(BaseSettings):
     SEARCH_NETWORK_PREFIX: int = 24
     MULTI_SITE_LIMIT: int = 50  # max length of the new siteName
 
-    # Output file names
+    # Output folder
     OUTPUT_FOLDER: str = "output"
+    # Report folder
+    REPORT_FOLDER: str = "report"
 
     IPF_SNOW_MATCHED_FILENAME: str = "ipf_devices_found_in_snow.csv"
     IPF_SNOW_NOT_MATCHED_FILENAME: str = "ipf_devices_not_found_in_snow.csv"
