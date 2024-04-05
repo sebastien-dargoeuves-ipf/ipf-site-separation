@@ -299,7 +299,7 @@ def file_to_json(input: typer.FileText) -> json:
         output = json.load(input)
     except Exception as e:
         logger.error(f"Error loading file `{input}`, not a valid json. Error: {e}")
-        sys.exit("Invalid file")
+        sys.exit()
     return output
 
 
@@ -382,14 +382,14 @@ def read_site_sep_file(filename) -> Union[dict, bool]:
             logger.error(
                 f"Invalid file format for file `{filename.name}`. Please provide a CSV or Excel file."
             )
-            return False
+            sys.exit()
     except Exception as e:
         logger.error(f"Error reading file `{filename}`. Error: {e}")
-        return False
+        sys.exit()
     try:
         result = df.to_dict(orient="records")
         logger.info(f"File `{filename.name}` loaded")
         return result
     except Exception as e:
         logger.error(f"Error transforming file `{filename}` to dict. Error: {e}")
-        return False
+        sys.exit()
