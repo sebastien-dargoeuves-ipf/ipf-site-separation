@@ -85,7 +85,7 @@ def search_subnet(ip: str, subnet_data: str) -> str:
     )
 
 
-def match_ipf_with_snow(snow_devices, ipf_devices):
+def match_ipf_with_snow(ipf_devices, snow_devices):
     """
     Matches IPF devices with their corresponding devices in ServiceNow based on hostname.
 
@@ -316,7 +316,7 @@ def export_to_csv(list, filename, output_folder) -> bool:
         Boolean indicating if the file was saved successfully.
     """
     if not list:
-        logger.warning("No data to export")
+        logger.warning(f"No data to export in the file `{filename}`")
         return False
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
