@@ -87,7 +87,7 @@ def f_snow_site_sep(settings: Settings, update_ipf: bool):
         columns=["hostname", "loginIp", "sn", "siteName"]
     )
 
-    matched_devices, not_found_devices = match_ipf_with_snow(snow_devices, ipf_devices)
+    matched_devices, not_found_devices = match_ipf_with_snow(ipf_devices, snow_devices)
     if not update_ipf:
         logger.info("Dry run mode enabled, no data will be pushed to IP Fabric")
         export_to_csv(
