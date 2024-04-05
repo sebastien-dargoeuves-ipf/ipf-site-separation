@@ -34,7 +34,7 @@ Using the `snow` option, you can set up the SiteSeparation in IP Fabric to follo
 To run the script in dry run mode (default), which fetches and matches the device information but does not update IP Fabric:
 
 ```bash
-python snow_site_sep.py snow
+python site_sep.py snow
 ```
 
 In dry run mode, the script saves the matched and not found devices to `matched_devices.csv` and `not_found_devices.csv` respectively.
@@ -42,7 +42,7 @@ In dry run mode, the script saves the matched and not found devices to `matched_
 To update the global and local attributes in IP Fabric with the matched device information:
 
 ```bash
-python snow_site_sep.py snow --update-ipf
+python site_sep.py snow --update-ipf
 ```
 
 ### `catch_all` - Cleanup the devices belonging to a default site, specified in `modules/settings.py`
@@ -52,7 +52,7 @@ If the subnet of the management IP, based on `SEARCH_NETWORK_PREFIX` prefix leng
 If there are none or multiple matches, it will be listed with the `PREFIX_FIXME`
 
 ```bash
-python snow_site_sep.py catch_all
+python site_sep.py catch_all
 ```
 
 In dry run mode, the script saves the result to `catch_all_remediation.csv`.
@@ -60,7 +60,7 @@ In dry run mode, the script saves the result to `catch_all_remediation.csv`.
 To update the global and/or local attributes in IP Fabric with the matched device information:
 
 ```bash
-python snow_site_sep.py catch_all --update-ipf
+python site_sep.py catch_all --update-ipf
 ```
 
 ### `subnet` - Build Site Separation based on Subnet data provided in a json file
@@ -68,7 +68,7 @@ python snow_site_sep.py catch_all --update-ipf
 Using the subnet option, you can search for all devices with a login IP. If this IP is part of a subnet provided in a source file, the script will assign the device to the matching site based on the information in the file.
 
 ```bash
-python snow_site_sep.py subnet <name-of-subnet-file.json>
+python site_sep.py subnet <name-of-subnet-file.json>
 ```
 
 In dry run mode, the script saves the result to `subnets_site_separation.csv`.
@@ -76,7 +76,7 @@ In dry run mode, the script saves the result to `subnets_site_separation.csv`.
 To update the global and/or local attributes in IP Fabric with the matched device information:
 
 ```bash
-python snow_site_sep.py subnet <name-of-subnet-file.json> --update-ipf
+python site_sep.py subnet <name-of-subnet-file.json> --update-ipf
 ```
 
 The source file needs to be constructed like this:
@@ -98,16 +98,22 @@ The source file needs to be constructed like this:
 ]
 ```
 
-### `push` - Update the site separation settings based on a CSV file
+### `push` - Update the site separation settings based on a CSV or Excel file
 
 ```bash
-python snow_site_sep.py push <site_separation_to_push.csv>
+python site_sep.py push <site_separation_to_push.csv>
+```
+
+You can also by default, only the `siteName` will be updated. You can also specify which column to use to create multiple attributes. The attribute you will specify has to match the name of the column (case sensitive):
+
+```bash
+python site_sep.py push <site_separation_to_push.csv> -a siteName -a ServiceNowLocation -a Customer -a Building -a Region
 ```
 
 ### `report` - Create a report to find potential gaps in the Site Separation
 
 ```bash
-python snow_site_sep.py report <specify_report_filename>
+python site_sep.py report <specify_report_filename>
 ```
 
 Build a report with the following information:
@@ -115,7 +121,7 @@ Build a report with the following information:
 | hostname | loginIp | sn         | siteName | net        | matchingSites                                                                      | suggestedFinalSite | suggested eq IPF Site | finalSite |
 |----------|---------|------------|----------|------------|------------------------------------------------------------------------------------|--------------------|-----------------------|-----------|
 | device1  | 1.1.1.1 | ABCD1234EF | site2    | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | FALSE                 |           |
-| device2  | 1.1.1.2 | ABCD1234EF | site1    | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | TRUE                  |           |
+| device2  | 1.1.1.2 | ABCD1234GH | site1    | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | TRUE                  |           |
 
 ## Environment Variables
 
