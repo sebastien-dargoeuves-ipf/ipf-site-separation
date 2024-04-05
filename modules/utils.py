@@ -4,6 +4,7 @@ import os
 import sys
 from typing import Union
 
+import numpy as np
 import pandas as pd
 import typer
 from loguru import logger
@@ -373,8 +374,10 @@ def read_site_sep_file(filename) -> Union[dict, bool]:
     try:
         if filename.name.endswith(".csv"):
             df = pd.read_csv(filename)
+            df.replace({np.nan: None}, inplace=True)
         elif filename.name.endswith(".xlsx"):
             df = pd.read_excel(filename)
+            df.replace({np.nan: None}, inplace=True)
         else:
             logger.error(
                 f"Invalid file format for file `{filename.name}`. Please provide a CSV or Excel file."

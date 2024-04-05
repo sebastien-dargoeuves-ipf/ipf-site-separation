@@ -29,6 +29,8 @@ try:
 except ImportError:
     YASPIN_ANIMATION = False
 
+from ipdb import set_trace as debug
+
 
 def initiate_ipf(settings: Settings):
     """
@@ -47,21 +49,30 @@ def initiate_ipf(settings: Settings):
     )
 
 
-def update_attributes(ipf_client: IPFClient, devices: list, settings: Settings):
+def update_attributes(
+    ipf_client: IPFClient,
+    devices: list,
+    settings: Settings,
+    attributes_list: list = None,
+):
     """
     Updates attributes in IPF based on the devices provided.
 
     Args:
-        ipf: An instance of IPFClient used to update the attributes.
-        devices: A list of dictionaries representing the devices, each containing the following information:
+        ipf_client: An instance of IPFClient used to update the attributes.
+        devices: A list of dictionaries representing the devices, each containing, at minima, the following information:
             - sn: The serial number of the device.
-            - snow_location: The location of the device in ServiceNow.
-            - siteName: The name of the site associated with the device.
+            - key:value of the attributes to create/update.
+        settings: An instance of the Settings class containing the IP Fabric settings.
+        attributes_list: A list of attributes to update.
+
 
     Returns:
         False if no devices are provided, otherwise True.
     """
 
+    if attributes_list is None:
+        attributes_list = ["siteName"]
     if not devices:
         logger.info("No device matching - no attribute to update")
         return False
@@ -77,16 +88,38 @@ def update_attributes(ipf_client: IPFClient, devices: list, settings: Settings):
             f"(Optional) Do you want to update local attributes? It will recalculate siteSeparation for snapshot `{settings.IPF_SNAPSHOT_ID}`"
         )
     )
-    attributes_list = [
-        {"sn": d["sn"], "value": d.get("snow_location") or d.get("siteName")}
-        for d in devices
-    ]
+
+    # build the list of attributes mapping
+    attributes_mapping = []
+    for attribute in attributes_list:
+        if devices[0].get(attribute, "not_valid_attribute") != "not_valid_attribute":
+            attributes_mapping += [
+                {"sn": d["sn"], "name": attribute, "value": d.get(attribute)}
+                for d in devices
+                if d.get(attribute)
+            ]
+        else:
+            logger.warning(
+                f"Attribute {attribute} is not present in the file provided."
+            )
+            typer.confirm(
+                "Do you want to continue with the other attributes?",
+                default=False,
+                abort=True,
+            )
+            attributes_list.remove(attribute)
+
+    if not attributes_mapping:
+        logger.error("No attributes to update")
+        return False
 
     if update_global_attributes:
         ipf_attributes = Attributes(client=ipf_client)
-        request_update_attributes = ipf_attributes.set_sites_by_sn(attributes_list)
+        request_update_attributes = ipf_attributes.set_attributes_by_sn(
+            attributes_mapping
+        )
         logger.info(
-            f"Global Attributes 'siteName' has been updated for {len(request_update_attributes)} devices"
+            f"Global Attributes '{attributes_list}' updated! ({len(request_update_attributes)} entries)"
         )
 
     if update_local_attributes:
@@ -100,9 +133,11 @@ def update_attributes(ipf_client: IPFClient, devices: list, settings: Settings):
                 default=True,
             ):
                 ipf_attributes.delete_attribute(*all_attributes)
-        request_update_attributes = ipf_attributes.set_sites_by_sn(attributes_list)
+        request_update_attributes = ipf_attributes.set_attributes_by_sn(
+            attributes_mapping
+        )
         logger.info(
-            f"Local Attributes 'siteName' has been {'cleared and created' if clear_local else 'updated'} for {len(request_update_attributes)} devices"
+            f"Local Attributes '{attributes_list}' {'cleared and created!' if clear_local else 'updated!'} ({len(request_update_attributes)} entries)"
         )
 
     return True
@@ -177,7 +212,10 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, update_ipf: bool):
 
 
 def f_push_attribute_from_file(
-    settings: Settings, site_separation_file: json, update_ipf: bool
+    settings: Settings,
+    site_separation_file: json,
+    update_ipf: bool,
+    attributes_list: list = None,
 ):
     """
     Pushes attributes from a site separation file to IPF.
@@ -196,8 +234,9 @@ def f_push_attribute_from_file(
             filename=settings.IMPORT_SITESEP_FILENAME,
             output_folder=settings.OUTPUT_FOLDER,
         )
-    else:
-        return update_attributes(ipf_client, site_separation_json, settings)
+    return update_attributes(
+        ipf_client, site_separation_json, settings, attributes_list
+    )
 
 
 def f_ipf_report_site_sep(settings: Settings, file_output: str):
