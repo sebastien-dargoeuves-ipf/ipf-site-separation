@@ -113,7 +113,7 @@ def subnet(
 
 
 @app.command("push", help="Update the site separation settings based on a CSV file.")
-def subnet(
+def push(
     file_source: typer.FileText = typer.Argument(
         ...,
         help="The CSV file containing the new site separation to apply.",

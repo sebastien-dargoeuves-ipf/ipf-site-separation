@@ -2,7 +2,15 @@
 ServiceNow Functions
 """
 
-from ipfabric_snow.utils.servicenow_client import Snow
+import sys
+
+try:
+    from ipfabric_snow.utils.servicenow_client import Snow
+
+    SNOW_ENABLED = True
+except ImportError:
+    SNOW_ENABLED = False
+
 from loguru import logger
 
 from modules.f_ipf import initiate_ipf, update_attributes
@@ -20,6 +28,11 @@ def initiate_snow(settings: Settings):
     Returns:
         An instance of Snow.
     """
+    if not SNOW_ENABLED:
+        logger.error(
+            "ServiceNow module is not enabled, please install the required dependencies"
+        )
+        sys.exit(1)
     return Snow(
         auth=(settings.SNOW_USER, settings.SNOW_PASS),
         url=settings.SNOW_URL,
