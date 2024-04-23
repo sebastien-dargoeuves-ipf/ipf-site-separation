@@ -29,7 +29,7 @@ try:
 except ImportError:
     YASPIN_ANIMATION = False
 
-from ipdb import set_trace as debug
+# from ipdb import set_trace as debug
 
 
 def initiate_ipf(settings: Settings):
@@ -144,7 +144,6 @@ def update_attributes(
 
 
 def f_ipf_catch_all(settings: Settings, update_ipf: bool):
-
     ipf_client = initiate_ipf(settings)
     catch_all_devices = ipf_client.inventory.devices.all(
         filters={"siteName": ["eq", settings.CATCH_ALL]},
@@ -178,7 +177,6 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
 
 
 def f_ipf_subnet(settings: Settings, subnet_file: json, update_ipf: bool):
-
     subnet_data = file_to_json(subnet_file)
     if not validate_subnet_data(subnet_data):
         return False
