@@ -1,4 +1,6 @@
 typer
+loguru
+tqdm
 pandas
 openpyxl
 ipfabric
