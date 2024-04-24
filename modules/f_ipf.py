@@ -275,7 +275,7 @@ def f_ipf_report_site_sep(settings: Settings, file_output: str):
     logger.info("Collecting Managed IP table...")
     if YASPIN_ANIMATION:
         spinner = yaspin(
-            text="Collecting Managed IP table...",
+            text="Collecting Managed IP table",
             color="yellow",
             timer=True,
         )
