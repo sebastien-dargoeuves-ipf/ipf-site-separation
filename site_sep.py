@@ -132,7 +132,7 @@ def push(
         file.csv: A file containing the new site separation to apply.
         file.xlsx: A file containing the new site separation to apply.
     """
-    print(attributes_list)
+    
     if f_push_attribute_from_file(settings, file_source, True, attributes_list):
         logger.info("'Push Site Separation from file' task completed")
     else:

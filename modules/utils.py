@@ -16,7 +16,6 @@ try:
 except ImportError:
     YASPIN_ANIMATION = False
 
-from ipdb import set_trace as debug
 
 MSG_NO_LOGINIP = "no loginIp"
 MSG_SUBNET_NOT_FOUND = "subnet not found"
@@ -380,54 +379,48 @@ def create_site_sep_report(
         if device["siteName"] not in UNKNOWN_SITES
     }
     for device in devices_report:
+        device["currentSiteName"] = device.pop("siteName")
         device["matchingSites"] = subnet_site_report.get(device["net"])
         device["matchingSelectedSites"] = subnet_selected_site_report.get(device["net"])
         device["suggestedSite"] = suggested_final_site(device["matchingSites"])
         device["suggestedSelectedSite"] = suggested_final_site(
             device["matchingSelectedSites"]
         )
-        device["suggested eq IPF Site"] = device["suggestedSite"] == device["siteName"]
+        device["suggested eq IPF Site"] = (
+            device["suggestedSite"] == device["currentSiteName"]
+        )
         device["suggestedSite eq suggestedSelectedSite"] = (
             device["suggestedSite"] == device["suggestedSelectedSite"]
             if device["suggestedSite"]
             else "empty"
         )
         device["suggestedSelectedSite eq IPF Site"] = (
-            device["suggestedSelectedSite"] == device["siteName"]
+            device["suggestedSelectedSite"] == device["currentSiteName"]
         )
 
-        device["finalSite"] = ""
+        device["siteName"] = ""
 
         if device["suggestedSelectedSite eq IPF Site"]:
-            device["finalSite"] = device["suggestedSelectedSite"]
+            device["siteName"] = device["suggestedSelectedSite"]
         elif device["suggestedSite eq suggestedSelectedSite"]:
-            device["finalSite"] = device["suggestedSelectedSite"]
-        elif device["suggestedSelectedSite"] and device["siteName"] in UNKNOWN_SITES:
-            device["finalSite"] = device["suggestedSelectedSite"]
+            device["siteName"] = device["suggestedSelectedSite"]
+        elif (
+            device["suggestedSelectedSite"]
+            and device["currentSiteName"] in UNKNOWN_SITES
+        ):
+            device["siteName"] = device["suggestedSelectedSite"]
 
-        # elif device["suggestedSelectedSite"] and device["siteName"] not in UNKNOWN_SITES
-
-        # elif device["suggestedSite"] in UNKNOWN_SITES and device["siteName"] not in UNKNOWN_SITES and device["siteName"] in device["site based on hostname"]:
-        #     device["finalSite"] = device["siteName"]
-        # elif device["suggestedSite"] not in UNKNOWN_SITES and device["siteName"] in UNKNOWN_SITES and device["suggestedSite"] in device["site based on hostname"]:
-        #     device["finalSite"] = device["suggestedSite"]
-
+        device["#"] = "#"
 
         if hostname_match and (
             (device["suggestedSite"] in UNKNOWN_SITES)
             or (device["siteName"] in UNKNOWN_SITES)
             or (not device["suggestedSite"])
         ):
-            device["#"] = "#"
+
             device["site based on hostname"] = suggested_site_partial_name(
                 device["hostname"], hostname_to_site_dict
             )
-
-        # replace the name of the siteName by currentSiteName to allow importing the data in IPF
-        device = {
-            ("currentSiteName" if key == "siteName" else key): value
-            for key, value in device.items()
-        }
 
     if YASPIN_ANIMATION and hostname_match:
         sp.ok("✅ ")
@@ -484,6 +477,7 @@ def export_to_excel(list, filename, output_folder) -> bool:
     Returns:
         Boolean indicating if the file was saved successfully.
     """
+
     if not list:
         logger.warning("No data to export")
         return False
@@ -513,10 +507,10 @@ def read_site_sep_file(filename) -> Union[dict, bool]:
     """
     try:
         if filename.name.endswith(".csv"):
-            df = pd.read_csv(filename)
+            df = pd.read_csv(filename.name)
             df.replace({np.nan: None}, inplace=True)
         elif filename.name.endswith(".xlsx"):
-            df = pd.read_excel(filename)
+            df = pd.read_excel(filename.name)
             df.replace({np.nan: None}, inplace=True)
         else:
             logger.error(
