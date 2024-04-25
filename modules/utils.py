@@ -417,7 +417,6 @@ def create_site_sep_report(
             or (device["siteName"] in UNKNOWN_SITES)
             or (not device["suggestedSite"])
         ):
-
             device["site based on hostname"] = suggested_site_partial_name(
                 device["hostname"], hostname_to_site_dict
             )
