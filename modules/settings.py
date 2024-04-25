@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     IPF_TOKEN: str = os.getenv("IPF_TOKEN")
     IPF_SNAPSHOT_ID: str = os.getenv("IPF_SNAPSHOT_ID", "$last")
     IPF_VERIFY: bool = eval(os.getenv("IPF_VERIFY", "False").title())
+    IPF_TIMEOUT: int = os.getenv("IPF_TIMEOUT", 20)
 
     SNOW_USER: str = os.getenv("SNOW_USER")
     SNOW_PASS: str = os.getenv("SNOW_PASS")
