@@ -237,7 +237,7 @@ def f_push_attribute_from_file(
     )
 
 
-def f_ipf_report_site_sep(settings: Settings, file_output: str):
+def f_ipf_report_site_sep(settings: Settings, file_output: str, hostname_match: bool):
     """
     Publish a report containing info regarding site separation.
     | device  | sn  | loginIP | Subnet (based on loginIP & mask) | ipf Site | sites matching the subnet       | suggestedFinalSite | FinalSite |
@@ -275,7 +275,7 @@ def f_ipf_report_site_sep(settings: Settings, file_output: str):
     logger.info("Collecting Managed IP table...")
     if YASPIN_ANIMATION:
         spinner = yaspin(
-            text="Collecting Managed IP table...",
+            text="Collecting Managed IP table",
             color="yellow",
             timer=True,
         )
@@ -286,6 +286,8 @@ def f_ipf_report_site_sep(settings: Settings, file_output: str):
 
     # Generate report
     logger.info("Data collected, ready to start generating the report.")
-    devices_report = create_site_sep_report(ipf_devices, managed_ip_addresses)
+    devices_report = create_site_sep_report(
+        ipf_devices, managed_ip_addresses, hostname_match
+    )
 
     return export_to_excel(devices_report, file_output, settings.REPORT_FOLDER)
