@@ -9,8 +9,18 @@ import pandas as pd
 import typer
 from loguru import logger
 
+try:
+    from yaspin import yaspin
+
+    YASPIN_ANIMATION = True
+except ImportError:
+    YASPIN_ANIMATION = False
+
+from ipdb import set_trace as debug
+
 MSG_NO_LOGINIP = "no loginIp"
 MSG_SUBNET_NOT_FOUND = "subnet not found"
+UNKNOWN_SITES = ["unknown", "_catch_all_"]
 
 
 def search_site(
@@ -194,6 +204,7 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
                 mip_dict[mip["hostname"]].append(mip)
             else:
                 mip_dict[mip["hostname"]] = [mip]
+
         logger.debug("Converting IP addresses in Device Inventory to IP objects")
         for device in ipf_devices:
             device["loginIp"] = (
@@ -233,7 +244,7 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
         site_entry_count = defaultdict(lambda: defaultdict(int))
 
         # Count the number of devices for each site in each subnet
-        logger.debug("Counting the number of devices for each site in each subnet")
+        # logger.debug("Counting the number of devices for each site in each subnet")
         for entry in devices_report:
             site_name = entry["siteName"]
             if entry["net"] in [MSG_NO_LOGINIP, MSG_SUBNET_NOT_FOUND]:
@@ -254,6 +265,51 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
             subnet_report[subnet] = entry_stats
 
         return subnet_report
+
+    def create_subnet_selected_site_report(devices_report):
+        """
+        Creates a subnet site report based on the provided report data.
+
+        Args:
+            report: A list of dictionaries representing site entries.
+
+        Returns:
+            A dictionary containing the subnet site report with entry statistics.
+        """
+        from collections import defaultdict
+
+        site_entry_count = defaultdict(lambda: defaultdict(int))
+
+        # Count the number of devices for each site in each subnet
+        # logger.debug("Counting the number of devices for each site in each subnet")
+        for entry in devices_report:
+            site_name = entry["siteName"]
+            if entry["net"] in [MSG_NO_LOGINIP, MSG_SUBNET_NOT_FOUND]:
+                continue
+            net = entry["net"]
+            site_entry_count[net][site_name] += 1
+
+        subnet_report = {}
+        logger.debug("Calculating the entry statistics for each subnet")
+        for subnet, sites in site_entry_count.items():
+            filtered_sites = {
+                site: count
+                for site, count in sites.items()
+                if site not in UNKNOWN_SITES
+            }
+
+            entry_stats = {
+                site: {
+                    "count": count,
+                    "percent": float(
+                        f"{count / sum(filtered_sites.values()) * 100:.2f}"
+                    ),
+                }
+                for site, count in filtered_sites.items()
+            }
+            subnet_report[subnet] = entry_stats
+
+        return subnet_report or ""
 
     def suggested_final_site(matching_sites):
         """
@@ -277,20 +333,107 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
             return suggested_site
         return ""
 
+    def suggested_site_partial_name(hostname, hostname_to_site):
+        """
+        Returns the suggested site partial name based on the partial hostname.
+
+        Args:
+            partial_hostname: The partial hostname to search for.
+
+        Returns:
+            The suggested site partial name.
+        """
+        site_list = set()
+        partial_hostname = hostname
+        # hostname_to_site = {device["hostname"]: device["siteName"] for device in devices_report if device["hostname"] != hostname and device["siteName"] not in UNKNOWN_SITES}
+
+        while len(partial_hostname) > 5 and len(site_list) < 4:
+            matching_sites = {
+                site
+                for host, site in hostname_to_site.items()
+                if host.startswith(partial_hostname)
+            }
+            site_list.update(matching_sites)
+            partial_hostname = partial_hostname[:-1]
+
+        return site_list or "no site found based on hostname"
+
     # Find the management subnet for each device
     logger.info("Finding the management subnet for each device...")
     devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
     # Create the table containing all sites for each management subnet
     subnet_site_report = create_subnet_site_report(devices_report)
+    subnet_selected_site_report = create_subnet_selected_site_report(devices_report)
     logger.info("... and putting the data together")
+    if YASPIN_ANIMATION:
+        sp = yaspin(
+            text="Putting the data together",
+            color="yellow",
+            timer=True,
+        )
+        sp.start()
+    hostname_to_site_dict = {
+        device["hostname"]: device["siteName"]
+        for device in devices_report
+        if device["siteName"] not in UNKNOWN_SITES
+    }
     for device in devices_report:
         device["matchingSites"] = subnet_site_report.get(device["net"])
-        device["suggestedFinalSite"] = suggested_final_site(device["matchingSites"])
-        device["suggested eq IPF Site"] = (
-            device["suggestedFinalSite"] == device["siteName"]
+        device["matchingSelectedSites"] = subnet_selected_site_report.get(device["net"])
+        device["suggestedSite"] = suggested_final_site(device["matchingSites"])
+        device["suggestedSelectedSite"] = suggested_final_site(
+            device["matchingSelectedSites"]
         )
+        device["suggested eq IPF Site"] = device["suggestedSite"] == device["siteName"]
+        device["suggestedSite eq suggestedSelectedSite"] = (
+            device["suggestedSite"] == device["suggestedSelectedSite"]
+            if device["suggestedSite"]
+            else "empty"
+        )
+        device["suggestedSelectedSite eq IPF Site"] = (
+            device["suggestedSelectedSite"] == device["siteName"]
+        )
+
         device["finalSite"] = ""
 
+        if device["suggestedSelectedSite eq IPF Site"]:
+            device["finalSite"] = device["suggestedSelectedSite"]
+        elif device["suggestedSite eq suggestedSelectedSite"]:
+            device["finalSite"] = device["suggestedSelectedSite"]
+        elif device["suggestedSelectedSite"] and device["siteName"] in UNKNOWN_SITES:
+            device["finalSite"] = device["suggestedSelectedSite"]
+
+        # elif device["suggestedSelectedSite"] and device["siteName"] not in UNKNOWN_SITES
+
+        # elif device["suggestedSite"] in UNKNOWN_SITES and device["siteName"] not in UNKNOWN_SITES and device["siteName"] in device["site based on hostname"]:
+        #     device["finalSite"] = device["siteName"]
+        # elif device["suggestedSite"] not in UNKNOWN_SITES and device["siteName"] in UNKNOWN_SITES and device["suggestedSite"] in device["site based on hostname"]:
+        #     device["finalSite"] = device["suggestedSite"]
+
+        device["#"] = "#"
+
+        if (
+            (device["suggestedSite"] in UNKNOWN_SITES)
+            or (device["siteName"] in UNKNOWN_SITES)
+            # or (
+            #     isinstance(device["net"], str)
+            #     and device["net"] in MSG_SUBNET_NOT_FOUND
+            #     and device["siteName"] not in UNKNOWN_SITES
+            # )
+            or (not device["suggestedSite"])
+        ):
+            device["site based on hostname"] = suggested_site_partial_name(
+                device["hostname"], hostname_to_site_dict
+            )
+
+        # replace the name of the siteName by currentSiteName to allow importing the data in IPF
+        device = {
+            ("currentSiteName" if key == "siteName" else key): value
+            for key, value in device.items()
+        }
+
+    if YASPIN_ANIMATION:
+        sp.ok("✅ ")
     return devices_report
 
 
