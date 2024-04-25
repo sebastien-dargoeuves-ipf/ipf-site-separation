@@ -150,7 +150,7 @@ def report(
     hostname_match: bool = typer.Option(
         False,
         "--hostname-match",
-        "-h",
+        "-hm",
         help="Attempt matching devices based on similar hostname.",
     ),
 ):
