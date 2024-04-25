@@ -112,16 +112,22 @@ python site_sep.py push <site_separation_to_push.csv> -a siteName -a ServiceNowL
 
 ### `report` - Create a report to find potential gaps in the Site Separation
 
-```bash
-python site_sep.py report <specify_report_filename>
-```
+- Build a report with the following information:
 
-Build a report with the following information:
+    ```bash
+    python site_sep.py report <specify_report_filename>
+    ```
 
-| hostname | loginIp | sn         | siteName | net        | matchingSites                                                                      | suggestedFinalSite | suggested eq IPF Site | finalSite |
-|----------|---------|------------|----------|------------|------------------------------------------------------------------------------------|--------------------|-----------------------|-----------|
-| device1  | 1.1.1.1 | ABCD1234EF | site2    | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | FALSE                 |           |
-| device2  | 1.1.1.2 | ABCD1234GH | site1    | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | TRUE                  |           |
+    | hostname | loginIp | sn         | currentSiteName | net        | matchingSites                                                                      | suggestedFinalSite | suggested eq IPF Site | finalSite |
+    |----------|---------|------------|-----------------|------------|------------------------------------------------------------------------------------|--------------------|-----------------------|-----------|
+    | device1  | 1.1.1.1 | ABCD1234EF | site2           | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | FALSE                 |           |
+    | device2  | 1.1.1.2 | ABCD1234GH | site1           | 1.1.1.0/28 | {'site1': {'count': 9, 'percent': 90.00}, 'site2': {'count': 1, 'percent': 10.00}} | site1              | TRUE                  |           |
+
+- You can also use the option `--hostname-match` or `-hm` to perform a lookup based on the hostname. The script will try to find a match for devices with similar start of their hostname, and collect the siteName information for the matching devices.
+
+    ```bash
+    python site_sep.py report --hostname-match <specify_report_filename>
+    ```
 
 ## Environment Variables
 
