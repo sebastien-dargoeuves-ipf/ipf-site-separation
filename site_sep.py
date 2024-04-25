@@ -132,7 +132,7 @@ def push(
         file.csv: A file containing the new site separation to apply.
         file.xlsx: A file containing the new site separation to apply.
     """
-    print(attributes_list)
+    
     if f_push_attribute_from_file(settings, file_source, True, attributes_list):
         logger.info("'Push Site Separation from file' task completed")
     else:
@@ -147,6 +147,12 @@ def report(
         ...,
         help="Name of the file to output the report.",
     ),
+    hostname_match: bool = typer.Option(
+        False,
+        "--hostname-match",
+        "-h",
+        help="Attempt matching devices based on similar hostname.",
+    ),
 ):
     """
     Build a report with the following information:
@@ -159,7 +165,7 @@ def report(
         file_output: the (Excel) file where the report will be written.
     """
 
-    if f_ipf_report_site_sep(settings, file_output):
+    if f_ipf_report_site_sep(settings, file_output, hostname_match):
         logger.info("'Report Site Separation' task completed")
     else:
         logger.warning("'Report Site Separation' task failed")
