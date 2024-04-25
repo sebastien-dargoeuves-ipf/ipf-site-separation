@@ -167,7 +167,9 @@ def validate_subnet_data(subnet_data: json) -> bool:
     return True
 
 
-def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> list:
+def create_site_sep_report(
+    ipf_devices: list, managed_ip_addresses: list, hostname_match: bool
+) -> list:
     """
     Builds a Site Separation report based on the list of devices and their managed IP
 
@@ -365,7 +367,7 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
     subnet_site_report = create_subnet_site_report(devices_report)
     subnet_selected_site_report = create_subnet_selected_site_report(devices_report)
     logger.info("... and putting the data together")
-    if YASPIN_ANIMATION:
+    if YASPIN_ANIMATION and hostname_match:
         sp = yaspin(
             text="Putting the data together",
             color="yellow",
@@ -410,18 +412,13 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
         # elif device["suggestedSite"] not in UNKNOWN_SITES and device["siteName"] in UNKNOWN_SITES and device["suggestedSite"] in device["site based on hostname"]:
         #     device["finalSite"] = device["suggestedSite"]
 
-        device["#"] = "#"
 
-        if (
+        if hostname_match and (
             (device["suggestedSite"] in UNKNOWN_SITES)
             or (device["siteName"] in UNKNOWN_SITES)
-            # or (
-            #     isinstance(device["net"], str)
-            #     and device["net"] in MSG_SUBNET_NOT_FOUND
-            #     and device["siteName"] not in UNKNOWN_SITES
-            # )
             or (not device["suggestedSite"])
         ):
+            device["#"] = "#"
             device["site based on hostname"] = suggested_site_partial_name(
                 device["hostname"], hostname_to_site_dict
             )
@@ -432,7 +429,7 @@ def create_site_sep_report(ipf_devices: list, managed_ip_addresses: list) -> lis
             for key, value in device.items()
         }
 
-    if YASPIN_ANIMATION:
+    if YASPIN_ANIMATION and hostname_match:
         sp.ok("✅ ")
     return devices_report
 
