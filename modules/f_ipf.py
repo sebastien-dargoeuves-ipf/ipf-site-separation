@@ -3,6 +3,7 @@ IP Fabric functions
 """
 
 import json
+import sys
 
 import typer
 from ipfabric import IPFClient
@@ -46,6 +47,7 @@ def initiate_ipf(settings: Settings):
         base_url=settings.IPF_URL,
         auth=settings.IPF_TOKEN,
         snapshot_id=settings.IPF_SNAPSHOT_ID,
+        timeout=settings.IPF_TIMEOUT,
     )
 
 
@@ -70,6 +72,45 @@ def update_attributes(
     Returns:
         False if no devices are provided, otherwise True.
     """
+
+    def set_attr_by_sn(ipf_client, ipf_attributes, attributes_mapping):
+        """
+        Set IP Fabric attributes by serial number.
+
+        Args:
+            ipf_attributes: IP Fabric attributes object.
+            attributes_mapping: Mapping of attributes to set.
+
+        Returns:
+            Request update attributes if successful, False otherwise.
+        Raises:
+            Exception: If setting attributes fails after retrying.
+
+        Examples:
+            set_attr_by_sn(ipf_client, ipf_attributes, attributes_mapping)
+        """
+        try:
+            request_update_attributes = ipf_attributes.set_attributes_by_sn(
+                attributes_mapping
+            )
+        except Exception as e:
+            if 0 < ipf_client.timeout.read < 30:
+                ipf_client.timeout = 5 * ipf_client.timeout.read
+            else:
+                ipf_client.timeout = 2 * ipf_client.timeout.read
+            logger.warning(
+                f"IP Fabric API Issue: {e}\nRetrying with a timeout of {ipf_client.timeout}s..."
+            )
+            ipf_attributes = Attributes(client=ipf_client)
+            try:
+                request_update_attributes = ipf_attributes.set_attributes_by_sn(
+                    attributes_mapping
+                )
+            except Exception as e:
+                logger.error(f"2nd attempt failed: {e}")
+                sys.exit(1)
+
+        return request_update_attributes
 
     if attributes_list is None:
         attributes_list = ["siteName"]
@@ -115,8 +156,8 @@ def update_attributes(
 
     if update_global_attributes:
         ipf_attributes = Attributes(client=ipf_client)
-        request_update_attributes = ipf_attributes.set_attributes_by_sn(
-            attributes_mapping
+        request_update_attributes = set_attr_by_sn(
+            ipf_client, ipf_attributes, attributes_mapping
         )
         logger.info(
             f"Global Attributes '{attributes_list}' updated! ({len(request_update_attributes)} entries)"
@@ -132,9 +173,14 @@ def update_attributes(
                 "Do you want to clear local attributes beforehand? If not it will only update the matching entries.",
                 default=True,
             ):
-                ipf_attributes.delete_attribute(*all_attributes)
-        request_update_attributes = ipf_attributes.set_attributes_by_sn(
-            attributes_mapping
+                try:
+                    ipf_attributes.delete_attribute(*all_attributes)
+                    logger.debug("Local attributes cleared")
+                except Exception as e:
+                    logger.error(f"Failed to clear local attributes: {e}")
+                    sys.exit(1)
+        request_update_attributes = set_attr_by_sn(
+            ipf_client, ipf_attributes, attributes_mapping
         )
         logger.info(
             f"Local Attributes '{attributes_list}' {'cleared and created!' if clear_local else 'updated!'} ({len(request_update_attributes)} entries)"
