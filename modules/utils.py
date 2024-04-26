@@ -22,6 +22,24 @@ MSG_SUBNET_NOT_FOUND = "subnet not found"
 UNKNOWN_SITES = ["unknown", "_catch_all_"]
 
 
+def check_host_bits(ip_with_subnet):
+    """
+    Check if the host bits are set in the IP address.
+    Returns True if no host bits are set, False otherwise.
+    """
+    if ip_with_subnet is None:
+        return False
+    network = ipaddress.ip_network(ip_with_subnet, strict=False)
+
+    actual_network_address = network.network_address
+
+    if ipaddress.ip_address(ip_with_subnet.split('/')[0]) != actual_network_address:
+        logger.warning(f"Host bits set: {ip_with_subnet} should be {actual_network_address}/{network.prefixlen}")
+        return False
+    else:
+        logger.info(f"No host bits set: {ip_with_subnet} is a valid network address.")
+        return True
+
 def search_site(
     ip: str,
     all_devices: list,
@@ -198,6 +216,9 @@ def create_site_sep_report(
         )
         mip_dict = {}
         for mip in managed_ip_addresses:
+            host_bit_check = check_host_bits(mip["net"])
+            if not host_bit_check:
+                continue
             mip["net"] = (
                 ipaddress.IPv4Network(mip["net"], strict=True) if mip["net"] else None
             )
