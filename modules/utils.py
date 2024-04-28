@@ -37,7 +37,6 @@ def check_host_bits(ip_with_subnet):
         logger.warning(f"Host bits set: {ip_with_subnet} should be {actual_network_address}/{network.prefixlen}")
         return False
     else:
-        logger.info(f"No host bits set: {ip_with_subnet} is a valid network address.")
         return True
 
 def search_site(
