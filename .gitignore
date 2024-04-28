@@ -3,6 +3,14 @@
 *.xls
 *.xlsx
 
+# Folders to be ignored
+logs/
+output/
+export/
+
+# Ruff
+.ruff_cache/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
