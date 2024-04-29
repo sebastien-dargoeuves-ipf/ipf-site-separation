@@ -171,7 +171,9 @@ def report(
         file_output: the (Excel) file where the report will be written.
     """
 
-    if f_ipf_report_site_sep(settings, file_output, hostname_match, connectivity_matrix_match):
+    if f_ipf_report_site_sep(
+        settings, file_output, hostname_match, connectivity_matrix_match
+    ):
         logger.info("'Report Site Separation' task completed")
     else:
         logger.warning("'Report Site Separation' task failed")
