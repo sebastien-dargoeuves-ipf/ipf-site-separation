@@ -217,7 +217,9 @@ def create_site_sep_report(
     devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
     # Create the table containing all sites for each management subnet
     subnet_site_report = create_subnet_site_report(devices_report)
-    subnet_selected_site_report = create_subnet_selected_site_report(settings, devices_report)
+    subnet_selected_site_report = create_subnet_selected_site_report(
+        settings, devices_report
+    )
     logger.info("... and putting the data together")
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp = yaspin(
@@ -238,44 +240,42 @@ def create_site_sep_report(
 
     for device in devices_report:
         device["currentSiteName"] = device.pop("siteName")
-        device["matchingSites"] = subnet_site_report.get(device["net"])
-        device["matchingSelectedSites"] = subnet_selected_site_report.get(device["net"])
+        device["matchingAllSites"] = subnet_site_report.get(device["net"])
+        device["matchingSites"] = subnet_selected_site_report.get(device["net"])
+        # device["suggestedAllSite"] = suggested_final_site(device["matchingAllSites"])
         device["suggestedSite"] = suggested_final_site(device["matchingSites"])
-        device["suggestedSelectedSite"] = suggested_final_site(
-            device["matchingSelectedSites"]
-        )
-        
-        # 
-        device["suggested eq IPF Site"] = (
+
+        #
+        # device["suggestedAllSite eq currentSiteName"] = (
+        #     device["suggestedAllSite"] == device["currentSiteName"]
+        # )
+        # device["suggestedAllSite eq suggestedSite"] = (
+        #     device["suggestedAllSite"] == device["suggestedSite"]
+        #     if device["suggestedAllSite"]
+        #     else "empty"
+        # )
+        device["suggestedSite eq currentSiteName"] = (
             device["suggestedSite"] == device["currentSiteName"]
-        )
-        device["suggestedSite eq suggestedSelectedSite"] = (
-            device["suggestedSite"] == device["suggestedSelectedSite"]
-            if device["suggestedSite"]
-            else "empty"
-        )
-        device["suggestedSelectedSite eq IPF Site"] = (
-            device["suggestedSelectedSite"] == device["currentSiteName"]
         )
 
         device["siteName"] = ""
 
-        if device["suggestedSelectedSite eq IPF Site"]:
-            device["siteName"] = device["suggestedSelectedSite"]
-        elif device["suggestedSite eq suggestedSelectedSite"]:
-            device["siteName"] = device["suggestedSelectedSite"]
+        if device["suggestedSite eq currentSiteName"]:
+            device["siteName"] = device["suggestedSite"]
+        # elif device["suggestedAllSite eq suggestedSite"]:
+        #     device["siteName"] = device["suggestedSite"]
         elif (
-            device["suggestedSelectedSite"]
+            device["suggestedSite"]
             and device["currentSiteName"] in settings.UNKNOWN_SITES
         ):
-            device["siteName"] = device["suggestedSelectedSite"]
+            device["siteName"] = device["suggestedSite"]
 
         device["#"] = "#"
 
         if hostname_match and (
-            (device["suggestedSite"] in settings.UNKNOWN_SITES)
-            or (device["siteName"] in settings.UNKNOWN_SITES)
+            (device["currentSiteName"] in settings.UNKNOWN_SITES)
             or (not device["suggestedSite"])
+            or (not device["suggestedSite eq currentSiteName"])
         ):
             device["site based on hostname"] = suggested_site_partial_name(
                 device["hostname"], hostname_to_site_dict
@@ -285,9 +285,10 @@ def create_site_sep_report(
                 device["site based on hostname"] = unique_site
                 device["siteName"] = unique_site
 
-        if (
-            connectivity_matrix_match
-            and device["currentSiteName"] in settings.UNKNOWN_SITES
+        if connectivity_matrix_match and (
+            (device["currentSiteName"] in settings.UNKNOWN_SITES)
+            or (not device["suggestedSite"])
+            or (not device["suggestedSite eq currentSiteName"])
         ):
             device["site based on connectivity_matrix"] = (
                 suggested_site_connectivity_matrix(
@@ -400,25 +401,5 @@ def recheck_site_separation(settings: Settings, devices_report: list):
         A list of dictionaries representing the devices report.
     """
     for device in devices_report:
-        device["suggested eq IPF Site"] = (
-            device["suggestedSite"] == device["currentSiteName"]
-        )
-        device["suggestedSite eq suggestedSelectedSite"] = (
-            device["suggestedSite"] == device["suggestedSelectedSite"]
-            if device["suggestedSite"]
-            else "empty"
-        )
-        device["suggestedSelectedSite eq IPF Site"] = (
-            device["suggestedSelectedSite"] == device["currentSiteName"]
-        )
-
-        device["siteName"] = ""
-
-        if device["suggestedSelectedSite eq IPF Site"]:
-            device["siteName"] = device["suggestedSelectedSite"]
-        elif device["suggestedSite eq suggestedSelectedSite"]:
-            device["siteName"] = device["suggestedSelectedSite"]
-
-        device["#"] = "#"
-
+        pass
     return devices_report
