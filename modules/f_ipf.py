@@ -13,7 +13,6 @@ from tqdm import tqdm
 
 from modules.settings import Settings
 from modules.utils import (
-    create_site_sep_report,
     export_to_csv,
     export_to_excel,
     file_to_json,
@@ -21,6 +20,10 @@ from modules.utils import (
     search_site,
     search_subnet,
     validate_subnet_data,
+)
+from modules.f_report import (
+    create_site_sep_report,
+    recheck_site_separation,
 )
 
 try:
@@ -283,7 +286,13 @@ def f_push_attribute_from_file(
     )
 
 
-def f_ipf_report_site_sep(settings: Settings, file_output: str, hostname_match: bool):
+def f_ipf_report_site_sep(
+    settings: Settings,
+    file_output: str,
+    hostname_match: bool,
+    connectivity_matrix_match: bool,
+    recheck_site_sep: bool,
+):
     """
     Publish a report containing info regarding site separation.
     | device  | sn  | loginIP | Subnet (based on loginIP & mask) | ipf Site | sites matching the subnet       | suggestedFinalSite | FinalSite |
@@ -330,10 +339,32 @@ def f_ipf_report_site_sep(settings: Settings, file_output: str, hostname_match: 
     if YASPIN_ANIMATION:
         spinner.ok("✅ ")
 
+    if connectivity_matrix_match:
+        # Collecting Connectivity Matrix
+        logger.info("Collecting Connectivity Matrix table...")
+        if YASPIN_ANIMATION:
+            spinner = yaspin(
+                text="Collecting Connectivity Matrix table",
+                color="yellow",
+                timer=True,
+            )
+            spinner.start()
+        connectivity_matrix = ipf_client.technology.interfaces.connectivity_matrix.all(
+            filters={"protocol": ["neq", "cef"]}
+        )
+        if YASPIN_ANIMATION:
+            spinner.ok("✅ ")
     # Generate report
     logger.info("Data collected, ready to start generating the report.")
     devices_report = create_site_sep_report(
-        ipf_devices, managed_ip_addresses, hostname_match
+        settings=settings,
+        ipf_devices=ipf_devices,
+        managed_ip_addresses=managed_ip_addresses,
+        hostname_match=hostname_match,
+        connectivity_matrix_match=connectivity_matrix_match,
+        connectivity_matrix=connectivity_matrix or None,
     )
+    if recheck_site_sep:
+        devices_report = recheck_site_separation(settings, devices_report)
 
     return export_to_excel(devices_report, file_output, settings.REPORT_FOLDER)
