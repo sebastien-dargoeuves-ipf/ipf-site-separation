@@ -159,6 +159,12 @@ def report(
         "-cmm",
         help="Attempt matching devices based on Connectivity Matrix Match.",
     ),
+    recheck_site_sep: bool = typer.Option(
+        False,
+        "--recheck-site-sep",
+        "-r",
+        help="Recheck the Site Separation based on the calculated data.",
+    ),
 ):
     """
     Build a report with the following information:
@@ -172,7 +178,11 @@ def report(
     """
 
     if f_ipf_report_site_sep(
-        settings, file_output, hostname_match, connectivity_matrix_match
+        settings,
+        file_output,
+        hostname_match,
+        connectivity_matrix_match,
+        recheck_site_sep,
     ):
         logger.info("'Report Site Separation' task completed")
     else:
