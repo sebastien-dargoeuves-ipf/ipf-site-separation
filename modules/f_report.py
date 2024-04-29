@@ -24,6 +24,7 @@ def create_site_sep_report(
     hostname_match: bool,
     connectivity_matrix_match: bool,
     connectivity_matrix: dict,
+    recheck_site_sep: list,
 ) -> list:
     """
     Builds a Site Separation report based on the list of devices and their managed IP
@@ -214,12 +215,13 @@ def create_site_sep_report(
 
     # Find the management subnet for each device
     logger.info("Finding the management subnet for each device...")
-    devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
+    if not recheck_site_sep:
+        devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
+    else:
+        devices_report = recheck_site_sep
     # Create the table containing all sites for each management subnet
-    subnet_site_report = create_subnet_site_report(devices_report)
-    subnet_selected_site_report = create_subnet_selected_site_report(
-        settings, devices_report
-    )
+    subnet_all_site_report = create_subnet_all_site_report(devices_report)
+    subnet_site_report = create_subnet_site_report(settings, devices_report)
     logger.info("... and putting the data together")
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp = yaspin(
@@ -240,20 +242,11 @@ def create_site_sep_report(
 
     for device in devices_report:
         device["currentSiteName"] = device.pop("siteName")
-        device["matchingAllSites"] = subnet_site_report.get(device["net"])
-        device["matchingSites"] = subnet_selected_site_report.get(device["net"])
+        device["matchingAllSites"] = subnet_all_site_report.get(device["net"])
+        device["matchingSites"] = subnet_site_report.get(device["net"])
         # device["suggestedAllSite"] = suggested_final_site(device["matchingAllSites"])
         device["suggestedSite"] = suggested_final_site(device["matchingSites"])
 
-        #
-        # device["suggestedAllSite eq currentSiteName"] = (
-        #     device["suggestedAllSite"] == device["currentSiteName"]
-        # )
-        # device["suggestedAllSite eq suggestedSite"] = (
-        #     device["suggestedAllSite"] == device["suggestedSite"]
-        #     if device["suggestedAllSite"]
-        #     else "empty"
-        # )
         device["suggestedSite eq currentSiteName"] = (
             device["suggestedSite"] == device["currentSiteName"]
         )
@@ -262,8 +255,6 @@ def create_site_sep_report(
 
         if device["suggestedSite eq currentSiteName"]:
             device["siteName"] = device["suggestedSite"]
-        # elif device["suggestedAllSite eq suggestedSite"]:
-        #     device["siteName"] = device["suggestedSite"]
         elif (
             device["suggestedSite"]
             and device["currentSiteName"] in settings.UNKNOWN_SITES
@@ -308,7 +299,7 @@ def create_site_sep_report(
     return devices_report
 
 
-def create_subnet_site_report(devices_report):
+def create_subnet_all_site_report(devices_report):
     """
     Creates a subnet site report based on the provided report data.
 
@@ -346,7 +337,7 @@ def create_subnet_site_report(devices_report):
     return subnet_report
 
 
-def create_subnet_selected_site_report(settings: Settings, devices_report: list):
+def create_subnet_site_report(settings: Settings, devices_report: list):
     """
     Creates a subnet site report based on the provided report data.
 
@@ -390,16 +381,38 @@ def create_subnet_selected_site_report(settings: Settings, devices_report: list)
     return subnet_report or ""
 
 
-def recheck_site_separation(settings: Settings, devices_report: list):
-    """
-    Recheck the Site Separation based on the calculated data.
+# def recheck_site_separation(settings: Settings, devices_report: list, connectivity_matrix_match: bool, connectivity_matrix: dict):
+#     """
+#     Recheck the Site Separation based on the calculated data.
 
-    Args:
-        devices_report: A list of dictionaries representing the devices report.
+#     Args:
+#         devices_report: A list of dictionaries representing the devices report.
 
-    Returns:
-        A list of dictionaries representing the devices report.
-    """
-    for device in devices_report:
-        pass
-    return devices_report
+#     Returns:
+#         A list of dictionaries representing the devices report.
+#     """
+#     logger.info("Re-processing the data, using the calculated data...")
+#     if YASPIN_ANIMATION:
+#         sp = yaspin(
+#             text="Re-processing the data",
+#             color="yellow",
+#             timer=True,
+#         )
+#         sp.start()
+#     # Create the table containing all sites for each management subnet, using the new siteName column
+#     subnet_all_site_report = create_subnet_all_site_report(devices_report)
+#     subnet_site_report = create_subnet_site_report(
+#         settings, devices_report
+#     )
+#     hostname_to_site_dict = {
+#         device["hostname"]: device["siteName"]
+#         for device in devices_report
+#         if device["siteName"] not in settings.UNKNOWN_SITES
+#     }
+#     if connectivity_matrix_match:
+#         hostname_connectivity_matrix_dict = create_connectivity_matrix_dict(
+#             connectivity_matrix, hostname_to_site_dict
+#         )
+#     for device in devices_report:
+
+#     return devices_report

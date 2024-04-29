@@ -21,10 +21,7 @@ from modules.utils import (
     search_subnet,
     validate_subnet_data,
 )
-from modules.f_report import (
-    create_site_sep_report,
-    recheck_site_separation,
-)
+from modules.f_report import create_site_sep_report
 
 try:
     from yaspin import yaspin
@@ -363,8 +360,18 @@ def f_ipf_report_site_sep(
         hostname_match=hostname_match,
         connectivity_matrix_match=connectivity_matrix_match,
         connectivity_matrix=connectivity_matrix or None,
+        recheck_site_sep=None,
     )
     if recheck_site_sep:
-        devices_report = recheck_site_separation(settings, devices_report)
+        logger.info("Re-processing the data, using the calculated data...")
+        devices_report = create_site_sep_report(
+            settings=settings,
+            ipf_devices=None,
+            managed_ip_addresses=None,
+            hostname_match=hostname_match,
+            connectivity_matrix_match=connectivity_matrix_match,
+            connectivity_matrix=connectivity_matrix or None,
+            recheck_site_sep=devices_report,
+        )
 
     return export_to_excel(devices_report, file_output, settings.REPORT_FOLDER)
