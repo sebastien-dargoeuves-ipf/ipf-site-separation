@@ -213,12 +213,95 @@ def create_site_sep_report(
             }
         return site_list or "no site found based on connectivity matrix"
 
+    def create_subnet_all_site_report(devices_report):
+        """
+        Creates a subnet site report based on the provided report data.
+
+        Args:
+            report: A list of dictionaries representing site entries.
+
+        Returns:
+            A dictionary containing the subnet site report with entry statistics.
+        """
+        from collections import defaultdict
+
+        site_entry_count = defaultdict(lambda: defaultdict(int))
+
+        # Count the number of devices for each site in each subnet
+        # logger.debug("Counting the number of devices for each site in each subnet")
+        for entry in devices_report:
+            site_name = entry["siteName"]
+            if entry["net"] in [MSG_NO_LOGINIP, MSG_SUBNET_NOT_FOUND]:
+                continue
+            net = entry["net"]
+            site_entry_count[net][site_name] += 1
+
+        subnet_report = {}
+        logger.debug("Calculating the entry statistics for each subnet")
+        for subnet, sites in site_entry_count.items():
+            entry_stats = {
+                net: {
+                    "count": count,
+                    "percent": float(f"{count / sum(sites.values()) * 100:.2f}"),
+                }
+                for net, count in sites.items()
+            }
+            subnet_report[subnet] = entry_stats
+
+        return subnet_report
+
+    def create_subnet_site_report(settings: Settings, devices_report: list):
+        """
+        Creates a subnet site report based on the provided report data.
+
+        Args:
+            report: A list of dictionaries representing site entries.
+
+        Returns:
+            A dictionary containing the subnet site report with entry statistics.
+        """
+        from collections import defaultdict
+
+        site_entry_count = defaultdict(lambda: defaultdict(int))
+
+        # Count the number of devices for each site in each subnet
+        # logger.debug("Counting the number of devices for each site in each subnet")
+        for entry in devices_report:
+            site_name = entry["siteName"]
+            if entry["net"] in [MSG_NO_LOGINIP, MSG_SUBNET_NOT_FOUND]:
+                continue
+            net = entry["net"]
+            site_entry_count[net][site_name] += 1
+
+        subnet_report = {}
+        logger.debug("Calculating the entry statistics for each subnet")
+        for subnet, sites in site_entry_count.items():
+            filtered_sites = {
+                site: count
+                for site, count in sites.items()
+                if site not in settings.UNKNOWN_SITES
+            }
+
+            entry_stats = {
+                site: {
+                    "count": count,
+                    "percent": float(f"{count / sum(filtered_sites.values()) * 100:.2f}"),
+                }
+                for site, count in filtered_sites.items()
+            }
+            subnet_report[subnet] = entry_stats
+
+        return subnet_report or ""
+
+
     # Find the management subnet for each device
     logger.info("Finding the management subnet for each device...")
     if not recheck_site_sep:
         devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
+        site_name_column = "siteName"
     else:
         devices_report = recheck_site_sep
+        site_name_column = "siteName2"
     # Create the table containing all sites for each management subnet
     subnet_all_site_report = create_subnet_all_site_report(devices_report)
     subnet_site_report = create_subnet_site_report(settings, devices_report)
@@ -251,15 +334,15 @@ def create_site_sep_report(
             device["suggestedSite"] == device["currentSiteName"]
         )
 
-        device["siteName"] = ""
+        device[site_name_column] = ""
 
         if device["suggestedSite eq currentSiteName"]:
-            device["siteName"] = device["suggestedSite"]
+            device[site_name_column] = device["suggestedSite"]
         elif (
             device["suggestedSite"]
             and device["currentSiteName"] in settings.UNKNOWN_SITES
         ):
-            device["siteName"] = device["suggestedSite"]
+            device[site_name_column] = device["suggestedSite"]
 
         device["#"] = "#"
 
@@ -271,10 +354,10 @@ def create_site_sep_report(
             device["site based on hostname"] = suggested_site_partial_name(
                 device["hostname"], hostname_to_site_dict
             )
-            if len(device["site based on hostname"]) == 1 and not device["siteName"]:
+            if len(device["site based on hostname"]) == 1 and not device[site_name_column]:
                 unique_site = device["site based on hostname"].pop()
                 device["site based on hostname"] = unique_site
-                device["siteName"] = unique_site
+                device[site_name_column] = unique_site
 
         if connectivity_matrix_match and (
             (device["currentSiteName"] in settings.UNKNOWN_SITES)
@@ -288,131 +371,13 @@ def create_site_sep_report(
             )
             if (
                 len(device["site based on connectivity_matrix"]) == 1
-                and not device["siteName"]
+                and not device[site_name_column]
             ):
                 unique_site = device["site based on connectivity_matrix"].pop()
                 device["site based on connectivity_matrix"] = unique_site
-                device["siteName"] = unique_site
+                device[site_name_column] = unique_site
 
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp.ok("✅ ")
     return devices_report
 
-
-def create_subnet_all_site_report(devices_report):
-    """
-    Creates a subnet site report based on the provided report data.
-
-    Args:
-        report: A list of dictionaries representing site entries.
-
-    Returns:
-        A dictionary containing the subnet site report with entry statistics.
-    """
-    from collections import defaultdict
-
-    site_entry_count = defaultdict(lambda: defaultdict(int))
-
-    # Count the number of devices for each site in each subnet
-    # logger.debug("Counting the number of devices for each site in each subnet")
-    for entry in devices_report:
-        site_name = entry["siteName"]
-        if entry["net"] in [MSG_NO_LOGINIP, MSG_SUBNET_NOT_FOUND]:
-            continue
-        net = entry["net"]
-        site_entry_count[net][site_name] += 1
-
-    subnet_report = {}
-    logger.debug("Calculating the entry statistics for each subnet")
-    for subnet, sites in site_entry_count.items():
-        entry_stats = {
-            net: {
-                "count": count,
-                "percent": float(f"{count / sum(sites.values()) * 100:.2f}"),
-            }
-            for net, count in sites.items()
-        }
-        subnet_report[subnet] = entry_stats
-
-    return subnet_report
-
-
-def create_subnet_site_report(settings: Settings, devices_report: list):
-    """
-    Creates a subnet site report based on the provided report data.
-
-    Args:
-        report: A list of dictionaries representing site entries.
-
-    Returns:
-        A dictionary containing the subnet site report with entry statistics.
-    """
-    from collections import defaultdict
-
-    site_entry_count = defaultdict(lambda: defaultdict(int))
-
-    # Count the number of devices for each site in each subnet
-    # logger.debug("Counting the number of devices for each site in each subnet")
-    for entry in devices_report:
-        site_name = entry["siteName"]
-        if entry["net"] in [MSG_NO_LOGINIP, MSG_SUBNET_NOT_FOUND]:
-            continue
-        net = entry["net"]
-        site_entry_count[net][site_name] += 1
-
-    subnet_report = {}
-    logger.debug("Calculating the entry statistics for each subnet")
-    for subnet, sites in site_entry_count.items():
-        filtered_sites = {
-            site: count
-            for site, count in sites.items()
-            if site not in settings.UNKNOWN_SITES
-        }
-
-        entry_stats = {
-            site: {
-                "count": count,
-                "percent": float(f"{count / sum(filtered_sites.values()) * 100:.2f}"),
-            }
-            for site, count in filtered_sites.items()
-        }
-        subnet_report[subnet] = entry_stats
-
-    return subnet_report or ""
-
-
-# def recheck_site_separation(settings: Settings, devices_report: list, connectivity_matrix_match: bool, connectivity_matrix: dict):
-#     """
-#     Recheck the Site Separation based on the calculated data.
-
-#     Args:
-#         devices_report: A list of dictionaries representing the devices report.
-
-#     Returns:
-#         A list of dictionaries representing the devices report.
-#     """
-#     logger.info("Re-processing the data, using the calculated data...")
-#     if YASPIN_ANIMATION:
-#         sp = yaspin(
-#             text="Re-processing the data",
-#             color="yellow",
-#             timer=True,
-#         )
-#         sp.start()
-#     # Create the table containing all sites for each management subnet, using the new siteName column
-#     subnet_all_site_report = create_subnet_all_site_report(devices_report)
-#     subnet_site_report = create_subnet_site_report(
-#         settings, devices_report
-#     )
-#     hostname_to_site_dict = {
-#         device["hostname"]: device["siteName"]
-#         for device in devices_report
-#         if device["siteName"] not in settings.UNKNOWN_SITES
-#     }
-#     if connectivity_matrix_match:
-#         hostname_connectivity_matrix_dict = create_connectivity_matrix_dict(
-#             connectivity_matrix, hostname_to_site_dict
-#         )
-#     for device in devices_report:
-
-#     return devices_report
