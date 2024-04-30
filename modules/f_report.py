@@ -285,14 +285,15 @@ def create_site_sep_report(
             entry_stats = {
                 site: {
                     "count": count,
-                    "percent": float(f"{count / sum(filtered_sites.values()) * 100:.2f}"),
+                    "percent": float(
+                        f"{count / sum(filtered_sites.values()) * 100:.2f}"
+                    ),
                 }
                 for site, count in filtered_sites.items()
             }
             subnet_report[subnet] = entry_stats
 
         return subnet_report or ""
-
 
     # Find the management subnet for each device
     logger.info("Finding the management subnet for each device...")
@@ -354,7 +355,10 @@ def create_site_sep_report(
             device["site based on hostname"] = suggested_site_partial_name(
                 device["hostname"], hostname_to_site_dict
             )
-            if len(device["site based on hostname"]) == 1 and not device[site_name_column]:
+            if (
+                len(device["site based on hostname"]) == 1
+                and not device[site_name_column]
+            ):
                 unique_site = device["site based on hostname"].pop()
                 device["site based on hostname"] = unique_site
                 device[site_name_column] = unique_site
@@ -380,4 +384,3 @@ def create_site_sep_report(
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp.ok("✅ ")
     return devices_report
-
