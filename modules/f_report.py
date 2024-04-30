@@ -299,10 +299,8 @@ def create_site_sep_report(
     logger.info("Finding the management subnet for each device...")
     if not recheck_site_sep:
         devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
-        site_name_column = "siteName"
     else:
         devices_report = recheck_site_sep
-        site_name_column = "siteName2"
     # Create the table containing all sites for each management subnet
     subnet_all_site_report = create_subnet_all_site_report(devices_report)
     subnet_site_report = create_subnet_site_report(settings, devices_report)
@@ -337,15 +335,15 @@ def create_site_sep_report(
             device["suggestedSite"] == device["currentSiteName"]
         )
 
-        device[site_name_column] = ""
+        device["siteName"] = ""
 
         if device["suggestedSite eq currentSiteName"]:
-            device[site_name_column] = device["suggestedSite"]
+            device["siteName"] = device["suggestedSite"]
         elif (
             device["suggestedSite"]
             and device["currentSiteName"] in settings.UNKNOWN_SITES
         ):
-            device[site_name_column] = device["suggestedSite"]
+            device["siteName"] = device["suggestedSite"]
 
         device["#"] = "#"
 
@@ -357,13 +355,10 @@ def create_site_sep_report(
             device["site based on hostname"] = suggested_site_partial_name(
                 device["hostname"], hostname_to_site_dict
             )
-            if (
-                len(device["site based on hostname"]) == 1
-                and not device[site_name_column]
-            ):
+            if len(device["site based on hostname"]) == 1 and not device["siteName"]:
                 unique_site = device["site based on hostname"].pop()
                 device["site based on hostname"] = unique_site
-                device[site_name_column] = unique_site
+                device["siteName"] = unique_site
 
         if connectivity_matrix_match and (
             (device["currentSiteName"] in settings.UNKNOWN_SITES)
@@ -377,11 +372,11 @@ def create_site_sep_report(
             )
             if (
                 len(device["site based on connectivity_matrix"]) == 1
-                and not device[site_name_column]
+                and not device["siteName"]
             ):
                 unique_site = device["site based on connectivity_matrix"].pop()
                 device["site based on connectivity_matrix"] = unique_site
-                device[site_name_column] = unique_site
+                device["siteName"] = unique_site
 
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp.ok("✅ ")
