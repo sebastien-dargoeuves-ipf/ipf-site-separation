@@ -334,7 +334,8 @@ def create_site_sep_report(
         device["suggestedSite eq currentSiteName"] = (
             device["suggestedSite"] == device["currentSiteName"]
         )
-
+        if recheck_site_sep:
+            device["siteName"] = device.pop("siteName")
         device[site_name_column] = ""
 
         if device["suggestedSite eq currentSiteName"]:
