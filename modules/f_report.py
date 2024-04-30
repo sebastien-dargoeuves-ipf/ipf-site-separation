@@ -325,6 +325,8 @@ def create_site_sep_report(
         )
 
     for device in devices_report:
+        if recheck_site_sep:
+            device["IPFSiteName"] = device.pop("currentSiteName")
         device["currentSiteName"] = device.pop("siteName")
         device["matchingAllSites"] = subnet_all_site_report.get(device["net"])
         device["matchingSites"] = subnet_site_report.get(device["net"])
@@ -334,8 +336,7 @@ def create_site_sep_report(
         device["suggestedSite eq currentSiteName"] = (
             device["suggestedSite"] == device["currentSiteName"]
         )
-        if recheck_site_sep:
-            device["siteName"] = device.pop("siteName")
+
         device[site_name_column] = ""
 
         if device["suggestedSite eq currentSiteName"]:
