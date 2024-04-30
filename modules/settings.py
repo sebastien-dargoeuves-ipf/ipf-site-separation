@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     SNOW_TIMEOUT: int = os.getenv("SNOW_TIMEOUT", 20)
 
     CATCH_ALL: str = "_catch_all_"
+    UNKNOWN_SITE: str = "_unknown_"
+    UNKNOWN_SITES: list = [UNKNOWN_SITE, CATCH_ALL]
     PREFIX_FIXME: str = "_fixme_"
     SEARCH_NETWORK_PREFIX: int = 24
     MULTI_SITE_LIMIT: int = 50  # max length of the new siteName
