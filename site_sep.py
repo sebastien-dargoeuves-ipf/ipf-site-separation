@@ -16,7 +16,7 @@ from modules.settings import Settings
 settings = Settings()
 app = typer.Typer(
     add_completion=False,
-    pretty_exceptions_show_locals=True,
+    pretty_exceptions_show_locals=False,
 )
 
 
@@ -153,6 +153,18 @@ def report(
         "-hm",
         help="Attempt matching devices based on similar hostname.",
     ),
+    connectivity_matrix_match: bool = typer.Option(
+        False,
+        "--connectivity-matrix-match",
+        "-cmm",
+        help="Attempt matching devices based on Connectivity Matrix Match.",
+    ),
+    recheck_site_sep: bool = typer.Option(
+        False,
+        "--recheck-site-sep",
+        "-r",
+        help="Recheck the Site Separation based on the calculated data.",
+    ),
 ):
     """
     Build a report with the following information:
@@ -165,7 +177,13 @@ def report(
         file_output: the (Excel) file where the report will be written.
     """
 
-    if f_ipf_report_site_sep(settings, file_output, hostname_match):
+    if f_ipf_report_site_sep(
+        settings,
+        file_output,
+        hostname_match,
+        connectivity_matrix_match,
+        recheck_site_sep,
+    ):
         logger.info("'Report Site Separation' task completed")
     else:
         logger.warning("'Report Site Separation' task failed")
