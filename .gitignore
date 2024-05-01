@@ -2,7 +2,6 @@
 *.csv
 *.xls
 *.xlsx
-stats.txt
 
 # Folders to be ignored
 logs/
