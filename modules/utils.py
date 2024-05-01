@@ -15,23 +15,25 @@ REPORT_COLUMNS = [
     "sn",
     "net",
     "IPFSiteName",
-    "#1",
+    "-",
     "matching all sites (subnet)",
     "matching sites (subnet)",
     "site based on subnet",
     "site based on subnet eq IPFSiteName",
-    "#2",
+    "|",
     "matching sites (hostname)",
     "site based on hostname",
     "site based on hostname eq IPFSiteName",
-    "#3",
+    "/",
     "matching sites (c_matrix)",
     "site based on c_matrix",
     "site based on c_matrix eq IPFSiteName",
-    "#4",
+    "#",
     "siteName-firstpass",
     "siteName",
+    "final vs original",
 ]
+
 
 def check_host_bits(ip_with_subnet):
     """
@@ -255,16 +257,22 @@ def export_to_excel(list, filename, output_folder) -> bool:
         os.makedirs(output_folder)
 
     output_file = f"{output_folder}/{filename}"
-    # # Filter the items in the list based on the COLUMNS
-    # matched_columns = [key for key in list[0].keys() if key in REPORT_COLUMNS]
 
-    # # Reorder the filtered list based on the order in the keys list
-    # matched_columns_ordered = [key for key in REPORT_COLUMNS if key in matched_columns]
-    # print(matched_columns)
-    # print(matched_columns_ordered)
     try:
         result = pd.DataFrame(list, columns=REPORT_COLUMNS)
-        result = result.dropna(axis=1, how='all')
+    except Exception as e:
+        logger.error(f"Error creating DataFrame. Error: {e}")
+        return False
+
+    result = result.dropna(axis=1, how="all")
+    # Edit column for the separator to be '|'
+    columns_to_rename = {"#": "|", "-": "|", "/": "|"}
+    result.rename(columns=columns_to_rename, inplace=True)
+    for col in result.columns:
+        if col == "|":
+            result[col] = "|"
+
+    try:
         result.to_excel(output_file, index=False)
         logger.info(f"File `{output_file}` saved")
         return True
