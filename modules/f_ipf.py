@@ -336,6 +336,7 @@ def f_ipf_report_site_sep(
     if YASPIN_ANIMATION:
         spinner.ok("✅ ")
 
+    connectivity_matrix = None
     if connectivity_matrix_match:
         # Collecting Connectivity Matrix
         logger.info("Collecting Connectivity Matrix table...")
@@ -359,7 +360,7 @@ def f_ipf_report_site_sep(
         managed_ip_addresses=managed_ip_addresses,
         hostname_match=hostname_match,
         connectivity_matrix_match=connectivity_matrix_match,
-        connectivity_matrix=connectivity_matrix or None,
+        connectivity_matrix=connectivity_matrix,
         recheck_site_sep=None,
     )
     if recheck_site_sep:
@@ -370,7 +371,7 @@ def f_ipf_report_site_sep(
             managed_ip_addresses=None,
             hostname_match=hostname_match,
             connectivity_matrix_match=connectivity_matrix_match,
-            connectivity_matrix=connectivity_matrix or None,
+            connectivity_matrix=connectivity_matrix,
             recheck_site_sep=devices_report,
         )
 
