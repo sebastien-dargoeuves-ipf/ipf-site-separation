@@ -1,6 +1,6 @@
 import ipaddress
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 from loguru import logger
 
@@ -132,6 +132,7 @@ def create_site_sep_report(
                 site
                 for host, site in hostname_to_site.items()
                 if host.startswith(partial_hostname)
+                if site
             }
             site_list.update(matching_sites)
             partial_hostname = partial_hostname[:-1]
@@ -216,7 +217,7 @@ def create_site_sep_report(
             }
         return site_list or "no site found based on connectivity matrix"
 
-    def create_subnet_all_site_report(devices_report):
+    def create_subnet_all_sites_report(devices_report):
         """
         Creates a subnet site report based on the provided report data.
 
@@ -252,7 +253,7 @@ def create_site_sep_report(
 
         return subnet_report
 
-    def create_subnet_site_report(settings: Settings, devices_report: list):
+    def create_subnet_sites_report(settings: Settings, devices_report: list):
         """
         Creates a subnet site report based on the provided report data.
 
@@ -280,7 +281,7 @@ def create_site_sep_report(
             filtered_sites = {
                 site: count
                 for site, count in sites.items()
-                if site not in settings.UNKNOWN_SITES
+                if site not in settings.UNKNOWN_SITES and site
             }
 
             entry_stats = {
@@ -305,8 +306,8 @@ def create_site_sep_report(
     else:
         devices_report = recheck_site_sep
     # Create the table containing all sites for each management subnet
-    subnet_all_site_report = create_subnet_all_site_report(devices_report)
-    subnet_site_report = create_subnet_site_report(settings, devices_report)
+    subnet_all_site_report = create_subnet_all_sites_report(devices_report)
+    subnet_site_report = create_subnet_sites_report(settings, devices_report)
     logger.info("... and putting the data together")
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp = yaspin(
@@ -329,12 +330,11 @@ def create_site_sep_report(
         if not recheck_site_sep:
             # we rename siteName to IPFSiteName, so the siteName is only used for the suggestion
             device["IPFSiteName"] = device.pop("siteName")
-            device["#1"] = "#"
-            device["#2"] = "#"
-            if hostname_match or connectivity_matrix_match:
-                device["#3"] = "#"
-            if hostname_match and connectivity_matrix_match:
-                device["#4"] = "#"
+            # Add some separators to the report
+            device["-"] = "-"
+            device["|"] = "|"
+            device["/"] = "/"
+            device["#"] = "#"
         else:
             device["siteName-firstpass"] = device.pop("siteName")
 
@@ -365,7 +365,6 @@ def create_site_sep_report(
             and device["IPFSiteName"] in settings.UNKNOWN_SITES
         ):
             device["tmp-siteName"] = device["site based on subnet"]
-
 
         #########################
         # Match based on hostname
@@ -418,8 +417,25 @@ def create_site_sep_report(
             else:
                 device["matching sites (c_matrix)"] = "skipped"
 
-
         device["siteName"] = device.pop("tmp-siteName")
+        # Column to help show where the script will change a site already present to something else
+        if device["siteName"]:
+            if device["IPFSiteName"] == device["siteName"]:
+                device["final vs original"] = "same as original"
+            else:
+                if device["siteName"] == device.get("site based on c_matrix"):
+                    device["final vs original"] = "updated by c_matrix"
+                elif device["siteName"] == device.get("site based on hostname"):
+                    device["final vs original"] = "updated by hostname"
+                elif device["siteName"] == device.get("site based on subnet"):
+                    device["final vs original"] = "updated by subnet"
+                else:
+                    device["final vs original"] = "updated by magic!"
+        else:
+            if device["IPFSiteName"] in settings.UNKNOWN_SITES:
+                device["final vs original"] = "unknown"
+            else:
+                device["final vs original"] = "keep original?"
 
     # devices_report = [
     #     OrderedDict((key, device.get(key)) for key in REPORT_COLUMNS if key in device)
@@ -429,5 +445,4 @@ def create_site_sep_report(
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp.ok("✅ ")
 
-    print(devices_report[0].keys())
     return devices_report

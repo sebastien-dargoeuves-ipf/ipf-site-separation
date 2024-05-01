@@ -101,7 +101,9 @@ def update_attributes(
             logger.warning(
                 f"IP Fabric API Issue: {e}\nRetrying with a timeout of {ipf_client.timeout}s..."
             )
-            ipf_attributes = Attributes(client=ipf_client)
+            ipf_attributes = Attributes(
+                client=ipf_client, snapshot_id=ipf_client.snapshot_id
+            )
             try:
                 request_update_attributes = ipf_attributes.set_attributes_by_sn(
                     attributes_mapping
@@ -164,6 +166,7 @@ def update_attributes(
         )
 
     if update_local_attributes:
+        ipf_client.snapshot_id = settings.IPF_SNAPSHOT_ID
         ipf_attributes = Attributes(
             client=ipf_client, snapshot_id=settings.IPF_SNAPSHOT_ID
         )
