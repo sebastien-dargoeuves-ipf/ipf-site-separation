@@ -101,13 +101,19 @@ def update_attributes(
             logger.warning(
                 f"IP Fabric API Issue: {e}\nRetrying with a timeout of {ipf_client.timeout}s..."
             )
-            ipf_attributes = Attributes(client=ipf_client)
+            ipf_attributes = Attributes(
+                client=ipf_client, snapshot_id=ipf_client.snapshot_id
+            )
             try:
                 request_update_attributes = ipf_attributes.set_attributes_by_sn(
                     attributes_mapping
                 )
             except Exception as e:
                 logger.error(f"2nd attempt failed: {e}")
+                if "400 Bad Request" in e.args[0]:
+                    logger.info(
+                        f"This could be due to the size of the 'attributes_mapping': {sys.getsizeof(attributes_mapping)} bytes.\nTry to reduce the number of attributes to push (roughly <125000 bytes)"
+                    )
                 sys.exit(1)
 
         return request_update_attributes
@@ -164,6 +170,7 @@ def update_attributes(
         )
 
     if update_local_attributes:
+        ipf_client.snapshot_id = settings.IPF_SNAPSHOT_ID
         ipf_attributes = Attributes(
             client=ipf_client, snapshot_id=settings.IPF_SNAPSHOT_ID
         )
@@ -179,6 +186,7 @@ def update_attributes(
                 except Exception as e:
                     logger.error(f"Failed to clear local attributes: {e}")
                     sys.exit(1)
+
         request_update_attributes = set_attr_by_sn(
             ipf_client, ipf_attributes, attributes_mapping
         )
@@ -258,7 +266,7 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, update_ipf: bool):
 def f_push_attribute_from_file(
     settings: Settings,
     site_separation_file: json,
-    update_ipf: bool,
+    dry_run: bool,
     attributes_list: list = None,
 ):
     """
@@ -267,12 +275,12 @@ def f_push_attribute_from_file(
     Args:
         settings: An object containing the settings for the operation.
         site_separation_file: A CSV or XLSX file containing site separation data.
-        update_ipf: A boolean indicating whether to update IPF or export to CSV.
+        dry_run: A boolean indicating whether to update IPF or export to CSV.
     """
 
     site_separation_json = read_site_sep_file(site_separation_file)
     ipf_client = initiate_ipf(settings)
-    if not update_ipf:
+    if dry_run:
         return export_to_csv(
             list=site_separation_json,
             filename=settings.IMPORT_SITESEP_FILENAME,
@@ -336,6 +344,7 @@ def f_ipf_report_site_sep(
     if YASPIN_ANIMATION:
         spinner.ok("✅ ")
 
+    connectivity_matrix = None
     if connectivity_matrix_match:
         # Collecting Connectivity Matrix
         logger.info("Collecting Connectivity Matrix table...")
@@ -359,7 +368,7 @@ def f_ipf_report_site_sep(
         managed_ip_addresses=managed_ip_addresses,
         hostname_match=hostname_match,
         connectivity_matrix_match=connectivity_matrix_match,
-        connectivity_matrix=connectivity_matrix or None,
+        connectivity_matrix=connectivity_matrix,
         recheck_site_sep=None,
     )
     if recheck_site_sep:
@@ -370,7 +379,7 @@ def f_ipf_report_site_sep(
             managed_ip_addresses=None,
             hostname_match=hostname_match,
             connectivity_matrix_match=connectivity_matrix_match,
-            connectivity_matrix=connectivity_matrix or None,
+            connectivity_matrix=connectivity_matrix,
             recheck_site_sep=devices_report,
         )
 

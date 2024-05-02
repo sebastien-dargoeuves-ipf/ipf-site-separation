@@ -9,6 +9,31 @@ import pandas as pd
 import typer
 from loguru import logger
 
+REPORT_COLUMNS = [
+    "hostname",
+    "loginIp",
+    "sn",
+    "net",
+    "IPFSiteName",
+    "-",
+    "matching all sites (subnet)",
+    "matching sites (subnet)",
+    "site based on subnet",
+    "site based on subnet eq IPFSiteName",
+    "|",
+    "matching sites (hostname)",
+    "site based on hostname",
+    "site based on hostname eq IPFSiteName",
+    "/",
+    "matching sites (c_matrix)",
+    "site based on c_matrix",
+    "site based on c_matrix eq IPFSiteName",
+    "#",
+    "siteName-firstpass",
+    "siteName",
+    "final vs original",
+]
+
 
 def check_host_bits(ip_with_subnet):
     """
@@ -232,8 +257,22 @@ def export_to_excel(list, filename, output_folder) -> bool:
         os.makedirs(output_folder)
 
     output_file = f"{output_folder}/{filename}"
+
     try:
-        result = pd.DataFrame(list)
+        result = pd.DataFrame(list, columns=REPORT_COLUMNS)
+    except Exception as e:
+        logger.error(f"Error creating DataFrame. Error: {e}")
+        return False
+
+    result = result.dropna(axis=1, how="all")
+    # Edit column for the separator to be '|'
+    columns_to_rename = {"#": "|", "-": "|", "/": "|"}
+    result.rename(columns=columns_to_rename, inplace=True)
+    for col in result.columns:
+        if col == "|":
+            result[col] = "|"
+
+    try:
         result.to_excel(output_file, index=False)
         logger.info(f"File `{output_file}` saved")
         return True
