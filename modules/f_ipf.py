@@ -110,6 +110,10 @@ def update_attributes(
                 )
             except Exception as e:
                 logger.error(f"2nd attempt failed: {e}")
+                if "400 Bad Request" in e.args[0]:
+                    logger.info(
+                        f"This could be due to the size of the 'attributes_mapping': {sys.getsizeof(attributes_mapping)} bytes.\nTry to reduce the number of attributes to push (roughly <125000 bytes)"
+                    )
                 sys.exit(1)
 
         return request_update_attributes
@@ -182,6 +186,7 @@ def update_attributes(
                 except Exception as e:
                     logger.error(f"Failed to clear local attributes: {e}")
                     sys.exit(1)
+
         request_update_attributes = set_attr_by_sn(
             ipf_client, ipf_attributes, attributes_mapping
         )
@@ -261,7 +266,7 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, update_ipf: bool):
 def f_push_attribute_from_file(
     settings: Settings,
     site_separation_file: json,
-    update_ipf: bool,
+    dry_run: bool,
     attributes_list: list = None,
 ):
     """
@@ -270,12 +275,12 @@ def f_push_attribute_from_file(
     Args:
         settings: An object containing the settings for the operation.
         site_separation_file: A CSV or XLSX file containing site separation data.
-        update_ipf: A boolean indicating whether to update IPF or export to CSV.
+        dry_run: A boolean indicating whether to update IPF or export to CSV.
     """
 
     site_separation_json = read_site_sep_file(site_separation_file)
     ipf_client = initiate_ipf(settings)
-    if not update_ipf:
+    if dry_run:
         return export_to_csv(
             list=site_separation_json,
             filename=settings.IMPORT_SITESEP_FILENAME,
