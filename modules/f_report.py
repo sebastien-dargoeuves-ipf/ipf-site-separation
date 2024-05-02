@@ -1,5 +1,6 @@
 import ipaddress
 
+from collections import defaultdict
 
 from loguru import logger
 
@@ -112,9 +113,9 @@ def create_site_sep_report(
             return suggested_site
         return ""
 
-    def suggested_site_partial_name(hostname, hostname_to_site):
+    def suggested_sites_partial_name(hostname, hostname_to_site):
         """
-        Returns the suggested site partial name based on the partial hostname.
+        Returns suggested sites based on the partial hostname.
 
         Args:
             partial_hostname: The partial hostname to search for.
@@ -126,11 +127,15 @@ def create_site_sep_report(
         partial_hostname = hostname
         # hostname_to_site = {device["hostname"]: device["siteName"] for device in devices_report if device["hostname"] != hostname and device["siteName"] not in settings.UNKNOWN_SITES}
 
-        while len(partial_hostname) > 5 and len(site_list) < 4:
+        while (
+            len(partial_hostname) > settings.MIN_LENGTH_PARTIAL_HOSTNAME
+            and len(site_list) < settings.MAX_ENTRIES_SITE_LIST
+        ):
             matching_sites = {
                 site
                 for host, site in hostname_to_site.items()
                 if host.startswith(partial_hostname)
+                if site
             }
             site_list.update(matching_sites)
             partial_hostname = partial_hostname[:-1]
@@ -194,9 +199,11 @@ def create_site_sep_report(
 
         return hostname_connectivity_matrix_dict
 
-    def suggested_site_connectivity_matrix(hostname, hostname_connectivity_matrix_dict):
+    def suggested_sites_connectivity_matrix(
+        hostname, hostname_connectivity_matrix_dict
+    ):
         """
-        Returns the suggested site based on the connectivity matrix.
+        Returns suggested sites based on the connectivity matrix.
 
         Args:
             sn: The serial number to search for.
@@ -213,7 +220,7 @@ def create_site_sep_report(
             }
         return site_list or "no site found based on connectivity matrix"
 
-    def create_subnet_all_site_report(devices_report):
+    def create_subnet_all_sites_report(devices_report):
         """
         Creates a subnet site report based on the provided report data.
 
@@ -223,7 +230,6 @@ def create_site_sep_report(
         Returns:
             A dictionary containing the subnet site report with entry statistics.
         """
-        from collections import defaultdict
 
         site_entry_count = defaultdict(lambda: defaultdict(int))
 
@@ -250,7 +256,7 @@ def create_site_sep_report(
 
         return subnet_report
 
-    def create_subnet_site_report(settings: Settings, devices_report: list):
+    def create_subnet_sites_report(settings: Settings, devices_report: list):
         """
         Creates a subnet site report based on the provided report data.
 
@@ -260,7 +266,6 @@ def create_site_sep_report(
         Returns:
             A dictionary containing the subnet site report with entry statistics.
         """
-        from collections import defaultdict
 
         site_entry_count = defaultdict(lambda: defaultdict(int))
 
@@ -279,7 +284,7 @@ def create_site_sep_report(
             filtered_sites = {
                 site: count
                 for site, count in sites.items()
-                if site not in settings.UNKNOWN_SITES
+                if site not in settings.UNKNOWN_SITES and site
             }
 
             entry_stats = {
@@ -295,17 +300,17 @@ def create_site_sep_report(
 
         return subnet_report or ""
 
-    # Find the management subnet for each device
+    ########################################################
+    # Create the report
+    ########################################################
     logger.info("Finding the management subnet for each device...")
     if not recheck_site_sep:
         devices_report = find_mgmt_subnet(ipf_devices, managed_ip_addresses)
-        site_name_column = "siteName"
     else:
         devices_report = recheck_site_sep
-        site_name_column = "siteName"
     # Create the table containing all sites for each management subnet
-    subnet_all_site_report = create_subnet_all_site_report(devices_report)
-    subnet_site_report = create_subnet_site_report(settings, devices_report)
+    subnet_all_site_report = create_subnet_all_sites_report(devices_report)
+    subnet_site_report = create_subnet_sites_report(settings, devices_report)
     logger.info("... and putting the data together")
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp = yaspin(
@@ -325,65 +330,122 @@ def create_site_sep_report(
         )
 
     for device in devices_report:
-        if recheck_site_sep:
-            device["IPFSiteName"] = device.pop("currentSiteName")
-        device["currentSiteName"] = device.pop("siteName")
-        device["matchingAllSites"] = subnet_all_site_report.get(device["net"])
-        device["matchingSites"] = subnet_site_report.get(device["net"])
-        # device["suggestedAllSite"] = suggested_final_site(device["matchingAllSites"])
-        device["suggestedSite"] = suggested_final_site(device["matchingSites"])
+        if not recheck_site_sep:
+            # we rename siteName to IPFSiteName, so the siteName is only used for the suggestion
+            device["IPFSiteName"] = device.pop("siteName")
+            # Add some separators to the report
+            device["-"] = "-"
+            device["|"] = "|"
+            device["/"] = "/"
+            device["#"] = "#"
+        else:
+            device["siteName-firstpass"] = device.pop("siteName")
 
-        device["suggestedSite eq currentSiteName"] = (
-            device["suggestedSite"] == device["currentSiteName"]
+        #######################
+        # Match based on Subnet
+        #######################
+        # difference between matchingAllSites and matchingSites is that matchingSites excludes the unknown/catch_all sites, to keep for visibility only
+        device["matching all sites (subnet)"] = subnet_all_site_report.get(
+            device["net"]
+        )
+        device["matching sites (subnet)"] = subnet_site_report.get(device["net"])
+        device["site based on subnet"] = suggested_final_site(
+            device["matching sites (subnet)"]
         )
 
-        device[site_name_column] = ""
+        device["site based on subnet eq IPFSiteName"] = (
+            device["site based on subnet"] == device["IPFSiteName"]
+        )
 
-        if device["suggestedSite eq currentSiteName"]:
-            device[site_name_column] = device["suggestedSite"]
+        ####################################
+        # Find what the Final site should be
+        ####################################
+        device["tmp-siteName"] = ""
+        if device["site based on subnet eq IPFSiteName"]:
+            device["tmp-siteName"] = device["site based on subnet"]
         elif (
-            device["suggestedSite"]
-            and device["currentSiteName"] in settings.UNKNOWN_SITES
+            device["site based on subnet"]
+            and device["IPFSiteName"] in settings.UNKNOWN_SITES
         ):
-            device[site_name_column] = device["suggestedSite"]
+            device["tmp-siteName"] = device["site based on subnet"]
 
-        device["#"] = "#"
-
-        if hostname_match and (
-            (device["currentSiteName"] in settings.UNKNOWN_SITES)
-            or (not device["suggestedSite"])
-            or (not device["suggestedSite eq currentSiteName"])
-        ):
-            device["site based on hostname"] = suggested_site_partial_name(
-                device["hostname"], hostname_to_site_dict
-            )
+        #########################
+        # Match based on hostname
+        #########################
+        if hostname_match:
             if (
-                len(device["site based on hostname"]) == 1
-                and not device[site_name_column]
+                device["IPFSiteName"] in settings.UNKNOWN_SITES
+                or (not device["site based on subnet"])
+                or (not device["site based on subnet eq IPFSiteName"])
             ):
-                unique_site = device["site based on hostname"].pop()
-                device["site based on hostname"] = unique_site
-                device[site_name_column] = unique_site
-
-        if connectivity_matrix_match and (
-            (device["currentSiteName"] in settings.UNKNOWN_SITES)
-            or (not device["suggestedSite"])
-            or (not device["suggestedSite eq currentSiteName"])
-        ):
-            device["site based on connectivity_matrix"] = (
-                suggested_site_connectivity_matrix(
-                    device["hostname"], hostname_connectivity_matrix_dict
+                device["matching sites (hostname)"] = suggested_sites_partial_name(
+                    device["hostname"], hostname_to_site_dict
                 )
-            )
+
+                if len(device["matching sites (hostname)"]) == 1:
+                    unique_site = list(device["matching sites (hostname)"])[0]
+                    device["site based on hostname"] = unique_site
+                    device["site based on hostname eq IPFSiteName"] = (
+                        device["site based on hostname"] == device["IPFSiteName"]
+                    )
+                    if not device["tmp-siteName"]:
+                        device["tmp-siteName"] = unique_site
+                else:
+                    device["site based on hostname"] = ""
+                    device["site based on hostname eq IPFSiteName"] = False
+            else:
+                device["matching sites (hostname)"] = "skipped"
+
+        ###################################################
+        # Match based on connectivity matrix (L1 & L2 only)
+        ###################################################
+        if connectivity_matrix_match:
             if (
-                len(device["site based on connectivity_matrix"]) == 1
-                and not device[site_name_column]
+                device["IPFSiteName"] in settings.UNKNOWN_SITES
+                or (not device["site based on subnet"])
+                or (not device["site based on subnet eq IPFSiteName"])
             ):
-                unique_site = device["site based on connectivity_matrix"].pop()
-                device["site based on connectivity_matrix"] = unique_site
-                device[site_name_column] = unique_site
-        if recheck_site_sep:
-            device["siteName-firstpass"] = device.pop("currentSiteName")
+                device["matching sites (c_matrix)"] = (
+                    suggested_sites_connectivity_matrix(
+                        device["hostname"], hostname_connectivity_matrix_dict
+                    )
+                )
+                if len(device["matching sites (c_matrix)"]) == 1:
+                    unique_site = list(device["matching sites (c_matrix)"])[0]
+                    device["site based on c_matrix"] = unique_site
+                    device["tmp-siteName"] = unique_site
+                else:
+                    device["site based on c_matrix"] = ""
+                    device["site based on c_matrix eq IPFSiteName"] = False
+            else:
+                device["matching sites (c_matrix)"] = "skipped"
+
+        device["siteName"] = device.pop("tmp-siteName")
+        # Column to help show where the script will change a site already present to something else
+        if device["siteName"]:
+            if device["IPFSiteName"] == device["siteName"]:
+                device["final vs original"] = "same as original"
+            else:
+                if device["siteName"] == device.get("site based on c_matrix"):
+                    device["final vs original"] = "updated by c_matrix"
+                elif device["siteName"] == device.get("site based on hostname"):
+                    device["final vs original"] = "updated by hostname"
+                elif device["siteName"] == device.get("site based on subnet"):
+                    device["final vs original"] = "updated by subnet"
+                else:
+                    device["final vs original"] = "updated by magic!"
+        else:
+            if device["IPFSiteName"] in settings.UNKNOWN_SITES:
+                device["final vs original"] = "unknown"
+            else:
+                device["final vs original"] = "keep original?"
+
+    # devices_report = [
+    #     OrderedDict((key, device.get(key)) for key in REPORT_COLUMNS if key in device)
+    #     for device in devices_report
+    # ]
+
     if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
         sp.ok("✅ ")
+
     return devices_report

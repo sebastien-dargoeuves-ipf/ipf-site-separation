@@ -26,12 +26,16 @@ class Settings(BaseSettings):
     SNOW_URL: str = os.getenv("SNOW_URL")
     SNOW_TIMEOUT: int = os.getenv("SNOW_TIMEOUT", 20)
 
-    CATCH_ALL: str = "_catch_all_"
-    UNKNOWN_SITE: str = "_unknown_"
-    UNKNOWN_SITES: list = [UNKNOWN_SITE, CATCH_ALL]
+    CATCH_ALL: str = "_catch_all_"  # this could be a siteName where you would have a catch_all regex rule, instead of 'unknown'
+    DEFAULT_UNKNOWN_SITE: str = (
+        "unknown"  # default site name for unknown sites in IP Fabric
+    )
+    UNKNOWN_SITES: list = [DEFAULT_UNKNOWN_SITE, CATCH_ALL]
     PREFIX_FIXME: str = "_fixme_"
     SEARCH_NETWORK_PREFIX: int = 24
     MULTI_SITE_LIMIT: int = 50  # max length of the new siteName
+    MIN_LENGTH_PARTIAL_HOSTNAME: int = 5  # min length of the hostname to be considered for partial match with the option -hostname-match
+    MAX_ENTRIES_SITE_LIST: int = 4  # max number of entries to add in the site list, when the option -hostname-match is used
 
     # Output folder
     OUTPUT_FOLDER: str = "output"
