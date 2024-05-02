@@ -17,6 +17,7 @@ except ImportError:
 MSG_NO_LOGINIP = "no loginIp"
 MSG_SUBNET_NOT_FOUND = "subnet not found"
 
+
 def create_site_sep_report(
     settings: Settings,
     ipf_devices: list,
@@ -126,7 +127,10 @@ def create_site_sep_report(
         partial_hostname = hostname
         # hostname_to_site = {device["hostname"]: device["siteName"] for device in devices_report if device["hostname"] != hostname and device["siteName"] not in settings.UNKNOWN_SITES}
 
-        while len(partial_hostname) > settings.MIN_LENGTH_PARTIAL_HOSTNAME and len(site_list) < settings.MAX_ENTRIES_SITE_LIST:
+        while (
+            len(partial_hostname) > settings.MIN_LENGTH_PARTIAL_HOSTNAME
+            and len(site_list) < settings.MAX_ENTRIES_SITE_LIST
+        ):
             matching_sites = {
                 site
                 for host, site in hostname_to_site.items()
