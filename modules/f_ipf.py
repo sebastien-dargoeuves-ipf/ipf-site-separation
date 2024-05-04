@@ -132,7 +132,8 @@ def update_attributes(
     )
     update_local_attributes = bool(
         typer.confirm(
-            f"(Optional) Do you want to update local attributes? It will recalculate siteSeparation for snapshot `{settings.IPF_SNAPSHOT_ID}`"
+            f"(Optional) Do you want to update local attributes? It will recalculate siteSeparation for snapshot `{settings.IPF_SNAPSHOT_ID}`",
+            default=not update_global_attributes,
         )
     )
 
@@ -178,7 +179,7 @@ def update_attributes(
         if all_attributes := ipf_attributes.all():
             if clear_local := typer.confirm(
                 "Do you want to clear local attributes beforehand? If not it will only update the matching entries.",
-                default=True,
+                default=False,
             ):
                 try:
                     ipf_attributes.delete_attribute(*all_attributes)
