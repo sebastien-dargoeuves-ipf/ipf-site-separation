@@ -124,11 +124,17 @@ def create_site_sep_report(
             The suggested site partial name.
         """
         site_list = set()
-        partial_hostname = hostname
-        # hostname_to_site = {device["hostname"]: device["siteName"] for device in devices_report if device["hostname"] != hostname and device["siteName"] not in settings.UNKNOWN_SITES}
+
+        # if the hostname belongs to a vdom or vsys, we only take the first part of the hostname
+        if len(hostname.split("/")) > 1:
+            partial_hostname = hostname.split("/")[0]
+            min_length = len(partial_hostname) - 1
+        else:
+            partial_hostname = hostname
+            min_length = settings.MIN_LENGTH_PARTIAL_HOSTNAME
 
         while (
-            len(partial_hostname) > settings.MIN_LENGTH_PARTIAL_HOSTNAME
+            len(partial_hostname) > min_length
             and len(site_list) < settings.MAX_ENTRIES_SITE_LIST
         ):
             matching_sites = {
