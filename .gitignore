@@ -7,6 +7,7 @@
 logs/
 output/
 export/
+report/
 
 # Ruff
 .ruff_cache/
