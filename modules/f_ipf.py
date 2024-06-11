@@ -161,13 +161,19 @@ def update_attributes(
         logger.error("No attributes to update")
         return False
 
+    max_entries = 10000
+    split_attributes_mapping = [attributes_mapping[i:i+max_entries] for i in range(0, len(attributes_mapping), max_entries)]
+
     if update_global_attributes:
         ipf_attributes = Attributes(client=ipf_client)
-        request_update_attributes = set_attr_by_sn(
-            ipf_client, ipf_attributes, attributes_mapping
-        )
+        for index, attributes_batch in enumerate(split_attributes_mapping):
+            request_update_attributes = set_attr_by_sn(
+                ipf_client, ipf_attributes, attributes_batch
+            )
+            if len(split_attributes_mapping) > 1:
+                logger.info(f"Updating... part {index+1}/{len(split_attributes_mapping)}: {len(request_update_attributes)} entries ({len(request_update_attributes)/len(attributes_mapping)*100:.2f}%)")
         logger.info(
-            f"Global Attributes '{attributes_list}' updated! ({len(request_update_attributes)} entries)"
+            f"Global Attributes '{attributes_list}' updated! ({len(attributes_mapping)} entries)"
         )
 
     if update_local_attributes:
@@ -187,12 +193,15 @@ def update_attributes(
                 except Exception as e:
                     logger.error(f"Failed to clear local attributes: {e}")
                     sys.exit(1)
-
-        request_update_attributes = set_attr_by_sn(
-            ipf_client, ipf_attributes, attributes_mapping
-        )
+        for index, attributes_batch in enumerate(split_attributes_mapping):
+            request_update_attributes = set_attr_by_sn(
+                ipf_client, ipf_attributes, attributes_batch
+            )
+            # display the prgress based on the number of entries and the index
+            if len(split_attributes_mapping) > 1:
+                logger.info(f"Updating... part {index+1}/{len(split_attributes_mapping)}: {len(request_update_attributes)} entries ({len(request_update_attributes)/len(attributes_mapping)*100:.2f}%)")
         logger.info(
-            f"Local Attributes '{attributes_list}' {'cleared and created!' if clear_local else 'updated!'} ({len(request_update_attributes)} entries)"
+            f"Local Attributes '{attributes_list}' {'cleared and created!' if clear_local else 'updated!'} ({len(attributes_mapping)} entries)"
         )
 
     return True
