@@ -100,7 +100,7 @@ def search_site(
     return f"{prefix_fixme}no_site_found"
 
 
-def search_subnet(ip: str, subnet_data: str) -> str:
+def search_subnet(ip: str, subnet_data: list) -> tuple:
     """
     Returns the site name based on the subnet from the subnet_data.
 
