@@ -1,22 +1,26 @@
 [
     {
-        "name": "SiteA",
+        "value": "SiteA",
         "subnet": "10.194.56.64/28"
     },
     {
-        "name": "SiteC",
+        "value": "SiteC",
         "subnet": "10.194.56.96/28"
     },
     {
-        "name": "SiteB",
+        "value": "SiteB",
         "subnet": "10.194.56.80/28"
     },
     {
-        "name": "SiteD",
+        "value": "SiteD",
         "subnet": "10.194.56.112/28"
     },
     {
-        "name": "SiteE",
+        "value": "SiteE",
         "subnet": "10.194.50.128/28"
+    },
+    {
+        "value": "NAE HW",
+        "subnet": "10.64.0.0/16"
     }
 ]

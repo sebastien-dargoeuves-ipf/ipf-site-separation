@@ -240,7 +240,7 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
     return True
 
 
-def f_ipf_subnet(settings: Settings, subnet_file: json, update_ipf: bool):
+def f_ipf_subnet(settings: Settings, subnet_file: json, attribute_to_update: str, update_ipf: bool):
     subnet_data = file_to_json(subnet_file)
     if not validate_subnet_data(subnet_data):
         return False
@@ -250,26 +250,26 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, update_ipf: bool):
         filters={"loginIp": ["empty", False]},
         columns=["hostname", "loginIp", "sn", "model", "siteName"],
     )
-    site_separation_devices = []
+    new_attributes_devices = []
     progress_bar = tqdm(total=len(devices_with_ip), desc="Processing Devices")
     for device in devices_with_ip:
         if new_site := search_subnet(device["loginIp"], subnet_data):
-            site_separation_devices.append(
+            new_attributes_devices.append(
                 {
                     "sn": device["sn"],
-                    "siteName": new_site,
+                    attribute_to_update: new_site,
                 }
             )
         progress_bar.update(1)
     progress_bar.close()
     if not update_ipf:
         export_to_csv(
-            list=site_separation_devices,
+            list=new_attributes_devices,
             filename=settings.SUBNET_SITESEP_FILENAME,
             output_folder=settings.OUTPUT_FOLDER,
         )
     else:
-        update_attributes(ipf_client, site_separation_devices, settings)
+        update_attributes(ipf_client, new_attributes_devices, settings, attributes_list=[attribute_to_update])
     return True
 
 

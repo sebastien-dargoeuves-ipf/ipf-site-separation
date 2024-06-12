@@ -94,6 +94,12 @@ def subnet(
         ...,
         help="The file containing the subnet information: [{name: 'site1', subnet: '1.1.1.0/24'}, ...]",
     ),
+    attribute_to_update: str = typer.Option(
+        "siteName",
+        "--attribute",
+        "-a",
+        help="The attribute to update in IP Fabric. Default: siteName",
+    ),
     update_ipf: bool = typer.Option(
         False,
         help="Dry Mode is default, if this option is enabled, it will update IP Fabric Attributes",
@@ -106,7 +112,7 @@ def subnet(
         subnet_source.json: A file containing the information about all subnets and their matching siteName.
     """
 
-    if f_ipf_subnet(settings, subnet_source, update_ipf):
+    if f_ipf_subnet(settings=settings, subnet_file=subnet_source, attribute_to_update=attribute_to_update, update_ipf=update_ipf):
         logger.info("'Subnet Site Separation' task completed")
     else:
         logger.warning("'Subnet Site Separation' task failed")
