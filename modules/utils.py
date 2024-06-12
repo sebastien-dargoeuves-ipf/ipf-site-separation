@@ -119,7 +119,7 @@ def search_subnet(ip: str, subnet_data: list) -> tuple:
     ip = ipaddress.IPv4Address(ip)
     return next(
         (
-            subnet["name"]
+            subnet["value"]
             for subnet in subnet_data
             if ip in ipaddress.IPv4Network(subnet["subnet"])
         ),
