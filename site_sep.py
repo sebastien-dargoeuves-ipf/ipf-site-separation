@@ -130,6 +130,12 @@ def push(
         "-a",
         help="Additional attributes to update in IP Fabric. Format: -a attribute1 -a attribute2",
     ),
+    update_only: bool = typer.Option(
+        False,
+        "--update",
+        "-u",
+        help="If set, the script will skip all fields where the final siteName is matching the original IPF siteName",
+    ),
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
@@ -144,7 +150,7 @@ def push(
         file.csv: A file containing the new site separation to apply.
         file.xlsx: A file containing the new site separation to apply.
     """
-    if f_push_attribute_from_file(settings, file_source, dry_run, attributes_list):
+    if f_push_attribute_from_file(settings, file_source, update_only, dry_run, attributes_list):
         logger.info("'Push Site Separation from file' task completed")
     else:
         logger.warning("'Push Site Separation from file' task failed")
