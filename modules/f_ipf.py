@@ -161,13 +161,28 @@ def update_attributes(
 
     if update_global_attributes:
         ipf_attributes = Attributes(client=ipf_client)
+        clear_global = False
+        if all_attributes := ipf_attributes.all():
+            if clear_global := typer.confirm(
+                "Do you want to clear global attributes beforehand, to start with a clean state. You will lose all previously added Attributes.",
+                default=False,
+            ):
+                try:
+                    ipf_attributes.delete_attribute(*all_attributes)
+                    logger.debug("Global attributes cleared")
+                except Exception as e:
+                    logger.error(f"Failed to clear Global attributes: {e}")
+                    sys.exit(1)
+
         for index, attributes_batch in enumerate(split_attributes_mapping):
             request_update_attributes = set_attr_by_sn(ipf_client, ipf_attributes, attributes_batch)
             if len(split_attributes_mapping) > 1:
                 logger.info(
                     f"Updating... part {index+1}/{len(split_attributes_mapping)}: {len(request_update_attributes)} entries ({len(request_update_attributes)/len(attributes_mapping)*100:.2f}%)"
                 )
-        logger.info(f"Global Attributes '{attributes_list}' updated! ({len(attributes_mapping)} entries)")
+        logger.info(
+            f"Global Attributes '{attributes_list}' {'cleared and created!' if clear_global else 'updated!'} ({len(attributes_mapping)} entries)"
+        )
 
     if update_local_attributes:
         ipf_client.snapshot_id = settings.IPF_SNAPSHOT_ID
