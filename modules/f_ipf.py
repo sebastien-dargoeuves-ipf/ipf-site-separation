@@ -164,7 +164,7 @@ def update_attributes(
         clear_global = False
         if all_attributes := ipf_attributes.all():
             if clear_global := typer.confirm(
-                "Do you want to clear global attributes beforehand, to start with a clean state. You will lose all previously added Attributes.",
+                "Do you want to clear global attributes beforehand, to start with a clean state.\n /!\ YOU WILL LOSE ALL PREVIOUSLY ADDED ATTRIBUTES /!\\",
                 default=False,
             ):
                 try:
