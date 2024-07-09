@@ -86,9 +86,7 @@ def catch_all_cleanup(
         logger.warning("'catch_all' task failed")
 
 
-@app.command(
-    "subnet", help="Build Site Separation based on Subnet data provided in a json file."
-)
+@app.command("subnet", help="Build Site Separation based on Subnet data provided in a json file.")
 def subnet(
     subnet_source: typer.FileText = typer.Argument(
         ...,
@@ -112,7 +110,9 @@ def subnet(
         subnet_source.json: A file containing the information about all subnets and their matching siteName.
     """
 
-    if f_ipf_subnet(settings=settings, subnet_file=subnet_source, attribute_to_update=attribute_to_update, update_ipf=update_ipf):
+    if f_ipf_subnet(
+        settings=settings, subnet_file=subnet_source, attribute_to_update=attribute_to_update, update_ipf=update_ipf
+    ):
         logger.info("'Subnet Site Separation' task completed")
     else:
         logger.warning("'Subnet Site Separation' task failed")
@@ -150,15 +150,19 @@ def push(
         file.csv: A file containing the new site separation to apply.
         file.xlsx: A file containing the new site separation to apply.
     """
-    if f_push_attribute_from_file(settings, file_source, update_only, dry_run, attributes_list):
+    if f_push_attribute_from_file(
+        settings=settings,
+        site_separation_file=file_source,
+        update_only=update_only,
+        dry_run=dry_run,
+        attributes_list=attributes_list,
+    ):
         logger.info("'Push Site Separation from file' task completed")
     else:
         logger.warning("'Push Site Separation from file' task failed")
 
 
-@app.command(
-    "report", help="Create a report to find potential gaps in the Site Separation."
-)
+@app.command("report", help="Create a report to find potential gaps in the Site Separation.")
 def report(
     file_output: str = typer.Argument(
         ...,
