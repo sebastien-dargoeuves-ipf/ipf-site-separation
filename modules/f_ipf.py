@@ -56,6 +56,7 @@ def update_attributes(
     devices: list,
     settings: Settings,
     attributes_list: list = None,
+    update_only: bool = False,
 ):
     """
     Updates attributes in IPF based on the devices provided.
@@ -236,7 +237,7 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
             output_folder=settings.OUTPUT_FOLDER,
         )
     else:
-        update_attributes(ipf_client, catch_all_devices, settings)
+        update_attributes(ipf_client=ipf_client, devices=catch_all_devices, settings=settings)
     return True
 
 
@@ -269,13 +270,14 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, attribute_to_update: str
             output_folder=settings.OUTPUT_FOLDER,
         )
     else:
-        update_attributes(ipf_client, new_attributes_devices, settings, attributes_list=[attribute_to_update])
+        update_attributes(ipf_client=ipf_client, devices=new_attributes_devices, settings=settings, attributes_list=[attribute_to_update])
     return True
 
 
 def f_push_attribute_from_file(
     settings: Settings,
     site_separation_file: json,
+    update_only: bool,
     dry_run: bool,
     attributes_list: list = None,
 ):
@@ -297,7 +299,7 @@ def f_push_attribute_from_file(
             output_folder=settings.OUTPUT_FOLDER,
         )
     return update_attributes(
-        ipf_client, site_separation_json, settings, attributes_list
+        ipf_client=ipf_client, devices=site_separation_json, settings=settings, attributes_list=attributes_list, update_only=update_only
     )
 
 
