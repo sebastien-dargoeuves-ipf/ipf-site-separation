@@ -31,6 +31,7 @@ except ImportError:
     YASPIN_ANIMATION = False
 
 # from ipdb import set_trace as debug
+ATTRIBUTES_UPDATE_MAX = 10000
 
 
 def initiate_ipf(settings: Settings):
@@ -43,6 +44,9 @@ def initiate_ipf(settings: Settings):
     Returns:
         An instance of IPFClient.
     """
+    import logging
+
+    logging.getLogger("ipfabric").setLevel(logging.INFO)
     return IPFClient(
         base_url=settings.IPF_URL,
         auth=settings.IPF_TOKEN,
@@ -56,7 +60,6 @@ def update_attributes(
     devices: list,
     settings: Settings,
     attributes_list: list = None,
-    update_only: bool = False,
 ):
     """
     Updates attributes in IPF based on the devices provided.
@@ -68,6 +71,7 @@ def update_attributes(
             - key:value of the attributes to create/update.
         settings: An instance of the Settings class containing the IP Fabric settings.
         attributes_list: A list of attributes to update.
+        update_only: Bool to define if we are taking all entries from the file, or only the ones to update
 
 
     Returns:
@@ -91,24 +95,16 @@ def update_attributes(
             set_attr_by_sn(ipf_client, ipf_attributes, attributes_mapping)
         """
         try:
-            request_update_attributes = ipf_attributes.set_attributes_by_sn(
-                attributes_mapping
-            )
+            request_update_attributes = ipf_attributes.set_attributes_by_sn(attributes_mapping)
         except Exception as e:
             if 0 < ipf_client.timeout.read < 30:
                 ipf_client.timeout = 5 * ipf_client.timeout.read
             else:
                 ipf_client.timeout = 2 * ipf_client.timeout.read
-            logger.warning(
-                f"IP Fabric API Issue: {e}\nRetrying with a timeout of {ipf_client.timeout}s..."
-            )
-            ipf_attributes = Attributes(
-                client=ipf_client, snapshot_id=ipf_client.snapshot_id
-            )
+            logger.warning(f"IP Fabric API Issue: {e}\nRetrying with a timeout of {ipf_client.timeout}s...")
+            ipf_attributes = Attributes(client=ipf_client, snapshot_id=ipf_client.snapshot_id)
             try:
-                request_update_attributes = ipf_attributes.set_attributes_by_sn(
-                    attributes_mapping
-                )
+                request_update_attributes = ipf_attributes.set_attributes_by_sn(attributes_mapping)
             except Exception as e:
                 logger.error(f"2nd attempt failed: {e}")
                 if "400 Bad Request" in e.args[0]:
@@ -143,14 +139,10 @@ def update_attributes(
     for attribute in attributes_list:
         if devices[0].get(attribute, "not_valid_attribute") != "not_valid_attribute":
             attributes_mapping += [
-                {"sn": d["sn"], "name": attribute, "value": d.get(attribute)}
-                for d in devices
-                if d.get(attribute)
+                {"sn": d["sn"], "name": attribute, "value": d.get(attribute)} for d in devices if d.get(attribute)
             ]
         else:
-            logger.warning(
-                f"Attribute {attribute} is not present in the file provided."
-            )
+            logger.warning(f"Attribute {attribute} is not present in the file provided.")
             typer.confirm(
                 "Do you want to continue with the other attributes?",
                 default=False,
@@ -162,26 +154,24 @@ def update_attributes(
         logger.error("No attributes to update")
         return False
 
-    max_entries = 10000
-    split_attributes_mapping = [attributes_mapping[i:i+max_entries] for i in range(0, len(attributes_mapping), max_entries)]
+    split_attributes_mapping = [
+        attributes_mapping[i : i + ATTRIBUTES_UPDATE_MAX]
+        for i in range(0, len(attributes_mapping), ATTRIBUTES_UPDATE_MAX)
+    ]
 
     if update_global_attributes:
         ipf_attributes = Attributes(client=ipf_client)
         for index, attributes_batch in enumerate(split_attributes_mapping):
-            request_update_attributes = set_attr_by_sn(
-                ipf_client, ipf_attributes, attributes_batch
-            )
+            request_update_attributes = set_attr_by_sn(ipf_client, ipf_attributes, attributes_batch)
             if len(split_attributes_mapping) > 1:
-                logger.info(f"Updating... part {index+1}/{len(split_attributes_mapping)}: {len(request_update_attributes)} entries ({len(request_update_attributes)/len(attributes_mapping)*100:.2f}%)")
-        logger.info(
-            f"Global Attributes '{attributes_list}' updated! ({len(attributes_mapping)} entries)"
-        )
+                logger.info(
+                    f"Updating... part {index+1}/{len(split_attributes_mapping)}: {len(request_update_attributes)} entries ({len(request_update_attributes)/len(attributes_mapping)*100:.2f}%)"
+                )
+        logger.info(f"Global Attributes '{attributes_list}' updated! ({len(attributes_mapping)} entries)")
 
     if update_local_attributes:
         ipf_client.snapshot_id = settings.IPF_SNAPSHOT_ID
-        ipf_attributes = Attributes(
-            client=ipf_client, snapshot_id=settings.IPF_SNAPSHOT_ID
-        )
+        ipf_attributes = Attributes(client=ipf_client, snapshot_id=settings.IPF_SNAPSHOT_ID)
         clear_local = False
         if all_attributes := ipf_attributes.all():
             if clear_local := typer.confirm(
@@ -194,13 +184,22 @@ def update_attributes(
                 except Exception as e:
                     logger.error(f"Failed to clear local attributes: {e}")
                     sys.exit(1)
-        for index, attributes_batch in enumerate(split_attributes_mapping):
-            request_update_attributes = set_attr_by_sn(
-                ipf_client, ipf_attributes, attributes_batch
+
+        if len(split_attributes_mapping) > 1 and not typer.confirm(
+            f"\nUpdating local attribute when you have more than {ATTRIBUTES_UPDATE_MAX} entries is NOT supported, as the recalculation will happens more than once during the execution of the script.\n\nDo you wish to continue?",
+            default=False,
+        ):
+            logger.warning(
+                f"Exit due to lack of support of updating local attribute with more than {ATTRIBUTES_UPDATE_MAX} entries"
             )
+            sys.exit(0)
+        for index, attributes_batch in enumerate(split_attributes_mapping):
+            request_update_attributes = set_attr_by_sn(ipf_client, ipf_attributes, attributes_batch)
             # display the prgress based on the number of entries and the index
             if len(split_attributes_mapping) > 1:
-                logger.info(f"Updating... part {index+1}/{len(split_attributes_mapping)}: {len(request_update_attributes)} entries ({len(request_update_attributes)/len(attributes_mapping)*100:.2f}%)")
+                logger.info(
+                    f"Updating... part {index+1}/{len(split_attributes_mapping)}: {len(request_update_attributes)} entries ({len(request_update_attributes)/len(attributes_mapping)*100:.2f}%)"
+                )
         logger.info(
             f"Local Attributes '{attributes_list}' {'cleared and created!' if clear_local else 'updated!'} ({len(attributes_mapping)} entries)"
         )
@@ -270,7 +269,12 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, attribute_to_update: str
             output_folder=settings.OUTPUT_FOLDER,
         )
     else:
-        update_attributes(ipf_client=ipf_client, devices=new_attributes_devices, settings=settings, attributes_list=[attribute_to_update])
+        update_attributes(
+            ipf_client=ipf_client,
+            devices=new_attributes_devices,
+            settings=settings,
+            attributes_list=[attribute_to_update],
+        )
     return True
 
 
@@ -290,7 +294,7 @@ def f_push_attribute_from_file(
         dry_run: A boolean indicating whether to update IPF or export to CSV.
     """
 
-    site_separation_json = read_site_sep_file(site_separation_file)
+    site_separation_json = read_site_sep_file(site_separation_file, update_only)
     ipf_client = initiate_ipf(settings)
     if dry_run:
         return export_to_csv(
@@ -299,7 +303,10 @@ def f_push_attribute_from_file(
             output_folder=settings.OUTPUT_FOLDER,
         )
     return update_attributes(
-        ipf_client=ipf_client, devices=site_separation_json, settings=settings, attributes_list=attributes_list, update_only=update_only
+        ipf_client=ipf_client,
+        devices=site_separation_json,
+        settings=settings,
+        attributes_list=attributes_list,
     )
 
 
