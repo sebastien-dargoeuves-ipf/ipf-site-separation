@@ -51,17 +51,13 @@ def create_site_sep_report(
             A list of dictionaries representing IPF devices with the management subnet information added.
         """
         # Convert Managed IP table to dict with devices as keys and IP addresses to IP objects
-        logger.debug(
-            "Converting Managed IP table to dict with devices as keys and IP addresses to IP objects"
-        )
+        logger.debug("Converting Managed IP table to dict with devices as keys and IP addresses to IP objects")
         mip_dict = {}
         for mip in managed_ip_addresses:
             host_bit_check = check_host_bits(mip["net"])
             if not host_bit_check:
                 continue
-            mip["net"] = (
-                ipaddress.IPv4Network(mip["net"], strict=True) if mip["net"] else None
-            )
+            mip["net"] = ipaddress.IPv4Network(mip["net"], strict=True) if mip["net"] else None
             if mip["hostname"] in mip_dict:
                 mip_dict[mip["hostname"]].append(mip)
             else:
@@ -69,14 +65,10 @@ def create_site_sep_report(
 
         logger.debug("Converting IP addresses in Device Inventory to IP objects")
         for device in ipf_devices:
-            device["loginIp"] = (
-                ipaddress.IPv4Address(device["loginIp"]) if device["loginIp"] else None
-            )
+            device["loginIp"] = ipaddress.IPv4Address(device["loginIp"]) if device["loginIp"] else None
 
         # Find the management subnet for each device
-        logger.debug(
-            "Finding the management subnet for each device, using loginIp and Managed IP table"
-        )
+        logger.debug("Finding the management subnet for each device, using loginIp and Managed IP table")
         for device in ipf_devices:
             if not device["loginIp"]:
                 device["net"] = MSG_NO_LOGINIP
@@ -103,11 +95,7 @@ def create_site_sep_report(
         """
         if matching_sites:
             suggested_site = next(
-                (
-                    site
-                    for site, data in matching_sites.items()
-                    if data["percent"] >= 50
-                ),
+                (site for site, data in matching_sites.items() if data["percent"] >= 50),
                 "",
             )
             return suggested_site
@@ -133,15 +121,9 @@ def create_site_sep_report(
             partial_hostname = hostname
             min_length = settings.MIN_LENGTH_PARTIAL_HOSTNAME
 
-        while (
-            len(partial_hostname) > min_length
-            and len(site_list) < settings.MAX_ENTRIES_SITE_LIST
-        ):
+        while len(partial_hostname) > min_length and len(site_list) < settings.MAX_ENTRIES_SITE_LIST:
             matching_sites = {
-                site
-                for host, site in hostname_to_site.items()
-                if host.startswith(partial_hostname)
-                if site
+                site for host, site in hostname_to_site.items() if host.startswith(partial_hostname) if site
             }
             site_list.update(matching_sites)
             partial_hostname = partial_hostname[:-1]
@@ -205,9 +187,7 @@ def create_site_sep_report(
 
         return hostname_connectivity_matrix_dict
 
-    def suggested_sites_connectivity_matrix(
-        hostname, hostname_connectivity_matrix_dict
-    ):
+    def suggested_sites_connectivity_matrix(hostname, hostname_connectivity_matrix_dict):
         """
         Returns suggested sites based on the connectivity matrix.
 
@@ -220,9 +200,7 @@ def create_site_sep_report(
         site_list = set()
         if hostname in hostname_connectivity_matrix_dict:
             site_list = {
-                sites["remoteSite"]
-                for sites in hostname_connectivity_matrix_dict[hostname]
-                if sites["remoteSite"]
+                sites["remoteSite"] for sites in hostname_connectivity_matrix_dict[hostname] if sites["remoteSite"]
             }
         return site_list or "no site found based on connectivity matrix"
 
@@ -288,17 +266,13 @@ def create_site_sep_report(
         logger.debug("Calculating the entry statistics for each subnet")
         for subnet, sites in site_entry_count.items():
             filtered_sites = {
-                site: count
-                for site, count in sites.items()
-                if site not in settings.UNKNOWN_SITES and site
+                site: count for site, count in sites.items() if site not in settings.UNKNOWN_SITES and site
             }
 
             entry_stats = {
                 site: {
                     "count": count,
-                    "percent": float(
-                        f"{count / sum(filtered_sites.values()) * 100:.2f}"
-                    ),
+                    "percent": float(f"{count / sum(filtered_sites.values()) * 100:.2f}"),
                 }
                 for site, count in filtered_sites.items()
             }
@@ -331,9 +305,7 @@ def create_site_sep_report(
         if device["siteName"] not in settings.UNKNOWN_SITES
     }
     if connectivity_matrix_match:
-        hostname_connectivity_matrix_dict = create_connectivity_matrix_dict(
-            connectivity_matrix, hostname_to_site_dict
-        )
+        hostname_connectivity_matrix_dict = create_connectivity_matrix_dict(connectivity_matrix, hostname_to_site_dict)
 
     for device in devices_report:
         if not recheck_site_sep:
@@ -351,17 +323,11 @@ def create_site_sep_report(
         # Match based on Subnet
         #######################
         # difference between matchingAllSites and matchingSites is that matchingSites excludes the unknown/catch_all sites, to keep for visibility only
-        device["matching all sites (subnet)"] = subnet_all_site_report.get(
-            device["net"]
-        )
+        device["matching all sites (subnet)"] = subnet_all_site_report.get(device["net"])
         device["matching sites (subnet)"] = subnet_site_report.get(device["net"])
-        device["site based on subnet"] = suggested_final_site(
-            device["matching sites (subnet)"]
-        )
+        device["site based on subnet"] = suggested_final_site(device["matching sites (subnet)"])
 
-        device["site based on subnet eq IPFSiteName"] = (
-            device["site based on subnet"] == device["IPFSiteName"]
-        )
+        device["site based on subnet eq IPFSiteName"] = device["site based on subnet"] == device["IPFSiteName"]
 
         ####################################
         # Find what the Final site should be
@@ -369,10 +335,7 @@ def create_site_sep_report(
         device["tmp-siteName"] = ""
         if device["site based on subnet eq IPFSiteName"]:
             device["tmp-siteName"] = device["site based on subnet"]
-        elif (
-            device["site based on subnet"]
-            and device["IPFSiteName"] in settings.UNKNOWN_SITES
-        ):
+        elif device["site based on subnet"] and device["IPFSiteName"] in settings.UNKNOWN_SITES:
             device["tmp-siteName"] = device["site based on subnet"]
 
         #########################
@@ -411,10 +374,8 @@ def create_site_sep_report(
                 or (not device["site based on subnet"])
                 or (not device["site based on subnet eq IPFSiteName"])
             ):
-                device["matching sites (c_matrix)"] = (
-                    suggested_sites_connectivity_matrix(
-                        device["hostname"], hostname_connectivity_matrix_dict
-                    )
+                device["matching sites (c_matrix)"] = suggested_sites_connectivity_matrix(
+                    device["hostname"], hostname_connectivity_matrix_dict
                 )
                 if len(device["matching sites (c_matrix)"]) == 1:
                     unique_site = list(device["matching sites (c_matrix)"])[0]
