@@ -29,9 +29,7 @@ def initiate_snow(settings: Settings):
         An instance of Snow.
     """
     if not SNOW_ENABLED:
-        logger.error(
-            "ServiceNow module is not enabled, please install the required dependencies"
-        )
+        logger.error("ServiceNow module is not enabled, please install the required dependencies")
         sys.exit(1)
     return Snow(
         auth=(settings.SNOW_USER, settings.SNOW_PASS),
@@ -59,12 +57,8 @@ def get_snow_device_list(snow_client):
     full_snow_devices = snow_client.request_client.get_all_records(cmdb_table_devices)
 
     cmdb_table_locations = "cmn_location"
-    full_snow_locations = snow_client.request_client.get_all_records(
-        cmdb_table_locations
-    )
-    location_dict = {
-        loc["sys_id"]: loc["name"] for loc in full_snow_locations["result"]
-    }
+    full_snow_locations = snow_client.request_client.get_all_records(cmdb_table_locations)
+    location_dict = {loc["sys_id"]: loc["name"] for loc in full_snow_locations["result"]}
 
     snow_devices = []
     for device in full_snow_devices["result"]:
@@ -96,16 +90,12 @@ def f_snow_site_sep(settings: Settings, update_ipf: bool):
     snow_devices = get_snow_device_list(snow_client)
 
     ipf_client = initiate_ipf(settings)
-    ipf_devices = ipf_client.inventory.devices.all(
-        columns=["hostname", "loginIp", "sn", "siteName"]
-    )
+    ipf_devices = ipf_client.inventory.devices.all(columns=["hostname", "loginIp", "sn", "siteName"])
 
     matched_devices, not_found_devices = match_ipf_with_snow(ipf_devices, snow_devices)
     if not update_ipf:
         logger.info("Dry run mode enabled, no data will be pushed to IP Fabric")
-        export_to_csv(
-            matched_devices, settings.IPF_SNOW_MATCHED_FILENAME, settings.OUTPUT_FOLDER
-        )
+        export_to_csv(matched_devices, settings.IPF_SNOW_MATCHED_FILENAME, settings.OUTPUT_FOLDER)
         export_to_csv(
             not_found_devices,
             settings.IPF_SNOW_NOT_MATCHED_FILENAME,
