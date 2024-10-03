@@ -154,6 +154,24 @@ The hostname match removes 1 character of a device, searches for any other devic
 
 - **Recheck Site Separation (`--recheck-site-sep` or `-r` option)**: This option allows a second pass before generating the suggested `siteName`, based on the data calculated. This means that once the initial report is generated using the subnet matching (and optionally the hostname and connectivity matrix matches), it analyzes the new data to see if it can now map more devices to their `siteName`.
 
+## Usage
+
+```bash
+# Generate a report based on the subnet matching, plus showing the hostname match and connectivity matrix match if found.
+python3 site_sep.py report --hostname-match --connectivity-matrix-match --recheck-site-sep report_full_with_recheck
+# is the same as:
+python3 site_sep.py report -hm -cmm -r report_full_with_recheck
+
+# the output will be in ./report/report_full_with_recheck.xlsx
+
+# now to push these new attributes, you can use the push command:
+
+python3 site_sep.py push report/report_full_with_recheck.xlsx
+# or if you have a specific column you want to use:
+python3 site_sep.py push report/report_full_with_recheck.xlsx -a suggestedFinalSite
+
+```
+
 ## Environment Variables
 
 The script requires the following environment variables, which you will find in the `.env.sample` file:
