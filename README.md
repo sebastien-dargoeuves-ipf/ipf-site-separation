@@ -156,6 +156,8 @@ The hostname match removes 1 character of a device, searches for any other devic
 
 ## Usage
 
+### Example: generating a report
+
 ```bash
 # Generate a report based on the subnet matching, plus showing the hostname match and connectivity matrix match if found.
 python3 site_sep.py report --hostname-match --connectivity-matrix-match --recheck-site-sep report_full_with_recheck
@@ -169,7 +171,20 @@ python3 site_sep.py report -hm -cmm -r report_full_with_recheck
 python3 site_sep.py push report/report_full_with_recheck.xlsx
 # or if you have a specific column you want to use:
 python3 site_sep.py push report/report_full_with_recheck.xlsx -a suggestedFinalSite
+```
 
+### Example: updating global attributes, using a report generated from the `push`
+
+```bash
+╰─❯ python site_sep.py push report/2024-10-01-push.xlsx 
+2024-10-01 14:27:02.978 | INFO     | __main__:logging_configuration:45 - ---- NEW EXECUTION OF SCRIPT ----
+2024-10-01 14:27:03.082 | INFO     | modules.utils:read_site_sep_file:299 - File `report/2024-10-01-push.xlsx` loaded (234 entries)
+(Recommended) Do you want to update global attributes? [Y/n]: y
+(Optional) Do you want to update local attributes? It will recalculate siteSeparation for snapshot `$last` [y/N]: n
+Do you want to clear the existing global attributes?
+ /!\ YOU WILL LOSE ALL PREVIOUSLY ADDED ATTRIBUTES /!\ [y/N]: n
+2024-10-01 14:29:00.956 | INFO     | modules.f_ipf:update_attributes:183 - Global Attributes '['siteName']' updated! (234 entries)
+2024-10-01 14:29:00.965 | INFO     | __main__:push:160 - 'Push Site Separation from file' task completed
 ```
 
 ## Environment Variables
