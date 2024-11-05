@@ -4,13 +4,13 @@ IP Fabric functions
 
 import json
 import sys
+import time
 
 import typer
 from ipfabric import IPFClient
 from ipfabric.settings import Attributes
 from loguru import logger
-from tqdm import tqdm
-
+from modules.f_report import create_site_sep_report
 from modules.settings import Settings
 from modules.utils import (
     export_to_csv,
@@ -21,17 +21,36 @@ from modules.utils import (
     search_subnet,
     validate_subnet_data,
 )
-from modules.f_report import create_site_sep_report
-
-try:
-    from yaspin import yaspin
-
-    YASPIN_ANIMATION = True
-except ImportError:
-    YASPIN_ANIMATION = False
+from rich.console import Console
+from rich.progress import track
 
 # from ipdb import set_trace as debug
 ATTRIBUTES_UPDATE_MAX = 10000
+
+console = Console()
+
+
+def run_with_spinner(task_name: str, task_func, *args, **kwargs):
+    """
+    Run a task with a spinner.
+
+    Args:
+        task_name: The name of the task.
+        task_func: The function to run.
+        *args: The arguments to pass to the function.
+        **kwargs: The keyword arguments to pass to the function.
+
+    Returns:
+        The result of the task function.
+    """
+    logger.info(f"{task_name}...")
+    start_time = time.time()
+    with console.status(f"[bold yellow] {task_name}..."):
+        result = task_func(*args, **kwargs)
+    elapsed_time = time.time() - start_time
+    console.log(f"completed in {elapsed_time:.2f} seconds")
+    logger.info(f"✅ {task_name} completed in {elapsed_time:.2f} seconds")
+    return result
 
 
 def initiate_ipf(settings: Settings):
@@ -232,8 +251,7 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
         columns=["hostname", "loginIp", "sn", "model", "siteName"],
     )
 
-    progress_bar = tqdm(total=len(catch_all_devices), desc="Processing Devices")
-    for device in catch_all_devices:
+    for device in track(catch_all_devices, description="Processing Devices"):
         device["siteName"] = search_site(
             device["loginIp"],
             all_devices,
@@ -242,8 +260,7 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
             settings.MULTI_SITE_LIMIT,
             settings.PREFIX_FIXME,
         )
-        progress_bar.update(1)
-    progress_bar.close()
+
     if not update_ipf:
         export_to_csv(
             list=catch_all_devices,
@@ -266,8 +283,8 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, attribute_to_update: str
         columns=["hostname", "loginIp", "sn", "model", "siteName"],
     )
     new_attributes_devices = []
-    progress_bar = tqdm(total=len(devices_with_ip), desc="Processing Devices")
-    for device in devices_with_ip:
+
+    for device in track(devices_with_ip, description="Processing Devices"):
         if new_site := search_subnet(device["loginIp"], subnet_data):
             new_attributes_devices.append(
                 {
@@ -275,8 +292,7 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, attribute_to_update: str
                     attribute_to_update: new_site,
                 }
             )
-        progress_bar.update(1)
-    progress_bar.close()
+
     if not update_ipf:
         export_to_csv(
             list=new_attributes_devices,
@@ -331,7 +347,7 @@ def f_ipf_report_site_sep(
     hostname_match: bool,
     connectivity_matrix_match: bool,
     recheck_site_sep: bool,
-):
+):  # sourcery skip: extract-duplicate-method, extract-method
     """
     Publish a report containing info regarding site separation.
     | device  | sn  | loginIP | Subnet (based on loginIP & mask) | ipf Site | sites matching the subnet       | suggestedFinalSite | FinalSite |
@@ -350,50 +366,58 @@ def f_ipf_report_site_sep(
     ipf_client = initiate_ipf(settings)
 
     # Collecting Device inventory
-    logger.info("Collecting Device inventory...")
-    if YASPIN_ANIMATION:
-        spinner = yaspin(
-            text="Collecting Device inventory",
-            color="yellow",
-            timer=True,
-        )
-        spinner.start()
 
-    ipf_devices = ipf_client.inventory.devices.all(
+    # logger.info("Collecting Device inventory...")
+    # start_time = time.time()
+    # spinner = console.status("🔄[bold yellow] Collecting Device inventory...")
+    # spinner.start()
+    # ipf_devices = ipf_client.inventory.devices.all(
+    #     columns=["hostname", "loginIp", "sn", "siteName"],
+    # )
+    ipf_devices = run_with_spinner(
+        "Collecting Device inventory",
+        ipf_client.inventory.devices.all,
         columns=["hostname", "loginIp", "sn", "siteName"],
     )
-    if YASPIN_ANIMATION:
-        spinner.ok("✅ ")
+    # elapsed_time = time.time() - start_time
+    # console.log(f"completed in {elapsed_time:.2f} seconds")
+    # spinner.stop()
+    # logger.info(f"✅ Device inventory collected in {elapsed_time:.2f} seconds")
 
     # Collecting Managed IP table
-    logger.info("Collecting Managed IP table...")
-    if YASPIN_ANIMATION:
-        spinner = yaspin(
-            text="Collecting Managed IP table",
-            color="yellow",
-            timer=True,
-        )
-        spinner.start()
-    managed_ip_addresses = ipf_client.technology.addressing.managed_ip_ipv4.all()
-    if YASPIN_ANIMATION:
-        spinner.ok("✅ ")
+    # logger.info("Collecting Managed IP table...")
+    # start_time = time.time()
+    # spinner = console.status("[bold yellow] Collecting Managed IP table...")
+    # spinner.start()
+    # managed_ip_addresses = ipf_client.technology.addressing.managed_ip_ipv4.all()
+    managed_ip_addresses = run_with_spinner(
+        "Collecting Managed IP table",
+        ipf_client.technology.addressing.managed_ip_ipv4.all,
+    )
+    # elapsed_time = time.time() - start_time
+    # console.log(f"completed in {elapsed_time:.2f} seconds")
+    # spinner.stop()
+    # logger.info(f"✅ Managed IP table collected in {elapsed_time:.2f} seconds")
 
     connectivity_matrix = None
     if connectivity_matrix_match:
         # Collecting Connectivity Matrix
-        logger.info("Collecting Connectivity Matrix table...")
-        if YASPIN_ANIMATION:
-            spinner = yaspin(
-                text="Collecting Connectivity Matrix table",
-                color="yellow",
-                timer=True,
-            )
-            spinner.start()
-        connectivity_matrix = ipf_client.technology.interfaces.connectivity_matrix.all(
-            filters={"protocol": ["neq", "cef"]}
+        # logger.info("Collecting Connectivity Matrix table...")
+        # start_time = time.time()
+        # spinner = console.status("[bold yellow] Collecting Connectivity Matrix table...")
+        # spinner.start()
+        # connectivity_matrix = ipf_client.technology.interfaces.connectivity_matrix.all(
+        #     filters={"protocol": ["neq", "cef"]}
+        # )
+        connectivity_matrix = run_with_spinner(
+            "Collecting Connectivity Matrix table",
+            ipf_client.technology.interfaces.connectivity_matrix.all,
+            filters={"protocol": ["neq", "cef"]},
         )
-        if YASPIN_ANIMATION:
-            spinner.ok("✅ ")
+        # elapsed_time = time.time() - start_time
+        # console.log(f"completed in {elapsed_time:.2f} seconds")
+        # spinner.stop()
+        # logger.info(f"✅ Connectivity Matrix table collected in {elapsed_time:.2f} seconds")
     # Generate report
     logger.info("Data collected, ready to start generating the report.")
     devices_report = create_site_sep_report(
