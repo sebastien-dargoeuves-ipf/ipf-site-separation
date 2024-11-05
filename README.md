@@ -14,11 +14,9 @@ This script provides a command-line interface (CLI) to help manage the Site Sepa
 - loguru
 - pandas
 - Python 3.8 or higher
-- tqdm
 - typer
 - ipfabric_snow (only for the `snow` command)
 - openpyxl (for Excel reports)
-- yaspin (optional)
 
 ## Installation
 
