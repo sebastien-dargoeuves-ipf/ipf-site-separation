@@ -1,8 +1,8 @@
-typer
-loguru
-tqdm
-pandas
-openpyxl
 ipfabric
 ipfabric_snow
+loguru
+openpyxl
+pandas
+tqdm
+typer
 yaspin
