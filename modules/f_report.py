@@ -1,21 +1,19 @@
 import ipaddress
-
+import time
 from collections import defaultdict
 
 from loguru import logger
 
+from rich.console import Console
+
 from modules.settings import Settings
 from modules.utils import check_host_bits
 
-try:
-    from yaspin import yaspin
-
-    YASPIN_ANIMATION = True
-except ImportError:
-    YASPIN_ANIMATION = False
 
 MSG_NO_LOGINIP = "no loginIp"
 MSG_SUBNET_NOT_FOUND = "subnet not found"
+
+console = Console()
 
 
 def create_site_sep_report(
@@ -292,13 +290,11 @@ def create_site_sep_report(
     subnet_all_site_report = create_subnet_all_sites_report(devices_report)
     subnet_site_report = create_subnet_sites_report(settings, devices_report)
     logger.info("... and putting the data together")
-    if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
-        sp = yaspin(
-            text="Putting the data together",
-            color="yellow",
-            timer=True,
-        )
-        sp.start()
+    if hostname_match or connectivity_matrix_match:
+        start_time = time.time()
+        spinner = console.status("[bold yellow] Putting the data together")
+        spinner.start()
+
     hostname_to_site_dict = {
         device["hostname"]: device["siteName"]
         for device in devices_report
@@ -412,7 +408,10 @@ def create_site_sep_report(
     #     for device in devices_report
     # ]
 
-    if YASPIN_ANIMATION and (hostname_match or connectivity_matrix_match):
-        sp.ok("✅ ")
+    if hostname_match or connectivity_matrix_match:
+        elapsed_time = time.time() - start_time
+        console.log(f"completed in {elapsed_time:.2f} seconds")
+        spinner.stop()
+        logger.info(f"✅ Data put together in {elapsed_time:.2f} seconds")
 
     return devices_report
