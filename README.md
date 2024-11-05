@@ -10,13 +10,13 @@ This script provides a command-line interface (CLI) to help manage the Site Sepa
 
 ## Requirements
 
+- ipfabric
+- loguru
+- pandas
 - Python 3.8 or higher
 - typer
-- pandas
-- openpyxl (for Excel reports)
-- ipfabric
 - ipfabric_snow (only for the `snow` command)
-- yaspin (optional)
+- openpyxl (for Excel reports)
 
 ## Installation
 
