@@ -251,7 +251,7 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
         columns=["hostname", "loginIp", "sn", "model", "siteName"],
     )
 
-    for device in track(catch_all_devices, description="Processing Devices"):
+    for device in track(catch_all_devices, description="CatchAll - Processing Devices"):
         device["siteName"] = search_site(
             device["loginIp"],
             all_devices,
@@ -284,7 +284,7 @@ def f_ipf_subnet(settings: Settings, subnet_file: json, attribute_to_update: str
     )
     new_attributes_devices = []
 
-    for device in track(devices_with_ip, description="Processing Devices"):
+    for device in track(devices_with_ip, description="Subnet - Processing Devices"):
         if new_site := search_subnet(device["loginIp"], subnet_data):
             new_attributes_devices.append(
                 {
