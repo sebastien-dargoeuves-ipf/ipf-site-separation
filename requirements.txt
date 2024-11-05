@@ -3,6 +3,4 @@ ipfabric_snow
 loguru
 openpyxl
 pandas
-tqdm
 typer
-yaspin
