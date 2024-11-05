@@ -366,58 +366,26 @@ def f_ipf_report_site_sep(
     ipf_client = initiate_ipf(settings)
 
     # Collecting Device inventory
-
-    # logger.info("Collecting Device inventory...")
-    # start_time = time.time()
-    # spinner = console.status("🔄[bold yellow] Collecting Device inventory...")
-    # spinner.start()
-    # ipf_devices = ipf_client.inventory.devices.all(
-    #     columns=["hostname", "loginIp", "sn", "siteName"],
-    # )
     ipf_devices = run_with_spinner(
         "Collecting Device inventory",
         ipf_client.inventory.devices.all,
         columns=["hostname", "loginIp", "sn", "siteName"],
     )
-    # elapsed_time = time.time() - start_time
-    # console.log(f"completed in {elapsed_time:.2f} seconds")
-    # spinner.stop()
-    # logger.info(f"✅ Device inventory collected in {elapsed_time:.2f} seconds")
 
     # Collecting Managed IP table
-    # logger.info("Collecting Managed IP table...")
-    # start_time = time.time()
-    # spinner = console.status("[bold yellow] Collecting Managed IP table...")
-    # spinner.start()
-    # managed_ip_addresses = ipf_client.technology.addressing.managed_ip_ipv4.all()
     managed_ip_addresses = run_with_spinner(
         "Collecting Managed IP table",
         ipf_client.technology.addressing.managed_ip_ipv4.all,
     )
-    # elapsed_time = time.time() - start_time
-    # console.log(f"completed in {elapsed_time:.2f} seconds")
-    # spinner.stop()
-    # logger.info(f"✅ Managed IP table collected in {elapsed_time:.2f} seconds")
 
     connectivity_matrix = None
     if connectivity_matrix_match:
         # Collecting Connectivity Matrix
-        # logger.info("Collecting Connectivity Matrix table...")
-        # start_time = time.time()
-        # spinner = console.status("[bold yellow] Collecting Connectivity Matrix table...")
-        # spinner.start()
-        # connectivity_matrix = ipf_client.technology.interfaces.connectivity_matrix.all(
-        #     filters={"protocol": ["neq", "cef"]}
-        # )
         connectivity_matrix = run_with_spinner(
             "Collecting Connectivity Matrix table",
             ipf_client.technology.interfaces.connectivity_matrix.all,
             filters={"protocol": ["neq", "cef"]},
         )
-        # elapsed_time = time.time() - start_time
-        # console.log(f"completed in {elapsed_time:.2f} seconds")
-        # spinner.stop()
-        # logger.info(f"✅ Connectivity Matrix table collected in {elapsed_time:.2f} seconds")
     # Generate report
     logger.info("Data collected, ready to start generating the report.")
     devices_report = create_site_sep_report(
