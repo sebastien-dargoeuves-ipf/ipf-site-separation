@@ -1,4 +1,8 @@
-ipfabric~=6.6.0
+## Select the correct version of your IP Fabric's instance by uncommenting the appropriate line below
+# ipfabric==~6.6.0
+# ipfabric==~6.8.0
+# ipfabric==~6.10.0
+
 ipfabric_snow
 loguru
 openpyxl
