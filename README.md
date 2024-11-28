@@ -20,6 +20,8 @@ This script provides a command-line interface (CLI) to help manage the Site Sepa
 
 ## Installation
 
+### Online installation
+
 1. Clone the repository
 2. Install the dependencies with pip:
 
@@ -31,6 +33,19 @@ This script provides a command-line interface (CLI) to help manage the Site Sepa
 
     ```bash
     cp .env.sample .env
+    ```
+
+### Offline installation
+
+If you are installing the script on a machine that does not have internet access, you can use the following steps:
+
+1. Download the zip file for the repository from a connected device (Clone > Download ZIP)
+2. Copy the downloaded file to the offline machine (scp...)
+3. Unzip the file on the offline machine, and go to the directory
+4. From this offline machine, you can now install the dependencies:
+
+    ```bash
+    pip install --no-index --find-links=packages/ -r requirements.txt
     ```
 
 ## `snow` - Build Site Separation using ServiceNow data
