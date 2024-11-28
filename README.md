@@ -42,7 +42,14 @@ If you are installing the script on a machine that does not have internet access
 1. Download the zip file for the repository from a connected device (Clone > Download ZIP)
 2. Copy the downloaded file to the offline machine (scp...)
 3. Unzip the file on the offline machine, and go to the directory
-4. From this offline machine, you can now install the dependencies:
+4. Uncomment the line with the matching version of your IP Fabric instance in the `requirements.txt` file
+
+    ```bash
+    # ipfabric~=6.10.0
+    ipfabric~=6.8.0
+    ```
+
+5. From this offline machine, you can now install the dependencies:
 
     ```bash
     pip install --no-index --find-links=packages/ -r requirements.txt
