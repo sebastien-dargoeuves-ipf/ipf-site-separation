@@ -1,4 +1,4 @@
-ipfabric
+ipfabric~=6.6.0
 ipfabric_snow
 loguru
 openpyxl
