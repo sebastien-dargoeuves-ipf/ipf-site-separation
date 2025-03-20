@@ -3,6 +3,7 @@ IP Fabric functions
 """
 
 import json
+import os
 import sys
 import time
 
@@ -21,6 +22,7 @@ from modules.utils import (
     search_subnet,
     validate_subnet_data,
 )
+from packaging import version
 from rich.console import Console
 from rich.progress import track
 
@@ -229,7 +231,7 @@ def update_attributes(
             sys.exit(0)
         for index, attributes_batch in enumerate(split_attributes_mapping):
             request_update_attributes = set_attr_by_sn(ipf_client, ipf_attributes, attributes_batch)
-            # display the prgress based on the number of entries and the index
+            # display the progress based on the number of entries and the index
             if len(split_attributes_mapping) > 1:
                 logger.info(
                     f"Updating... part {index+1}/{len(split_attributes_mapping)}: {len(request_update_attributes)} entries ({len(request_update_attributes)/len(attributes_mapping)*100:.2f}%)"
@@ -410,3 +412,77 @@ def f_ipf_report_site_sep(
         )
 
     return export_to_excel(devices_report, file_output, settings.REPORT_FOLDER)
+
+
+def f_ipf_rules_collect(
+    settings: Settings,
+    file_str: str
+):
+    # Check if the file already exists
+    if os.path.exists("/".join([settings.OUTPUT_FOLDER,file_str])):
+        # Prompt user about overwriting
+        overwrite = typer.confirm(f"The file {file_str} already exists. Do you want to overwrite it?")
+
+        if not overwrite:
+            # Exit or choose an alternative filename
+            typer.echo("Operation cancelled.")
+            raise typer.Abort()
+    # Initialize IP Fabric client
+    ipf_client = initiate_ipf(settings)
+    # Collecting Site Separation rules
+    if site_separation_rules := ipf_client.settings.site_separation.get_separation_rules().get(
+        'rules', []
+    ):
+        export_to_csv(
+            list=site_separation_rules,
+            filename=file_str,
+            output_folder=settings.OUTPUT_FOLDER,
+        )
+        logger.info(f"{len(site_separation_rules)} site separation rules collected.")
+        return True
+    else:
+        logger.warning("No site separation rules found.")
+        return False
+    
+
+def f_ipf_rules_update(
+    settings: Settings,
+    file_str: str
+):
+    # Nothing to import if the file does not exist
+    if not os.path.exists(file_str):
+        logger.error(f"The file {file_str} does not exist.")
+        raise typer.Exit(code=1)
+
+    new_rules_json = file_to_json(file_str)
+
+    ipf_client = initiate_ipf(settings)
+    if version.parse(ipf_client.os_version) < version.parse("7.0.0"):
+        logger.info("SiteSeparation rules with `applyToCloudInstances` attribute are not supported in versions below 7.0.0")
+        logger.info("Checking and updating the rules...")
+        for rule in new_rules_json[:]:  # Create a copy of the list to safely modify during iteration
+            if rule.get('type') == 'regexCloudResourceId':
+                new_rules_json.remove(rule)
+            else:
+                rule.pop("applyToCloudInstances", None)
+
+
+    rules_settings = ipf_client.settings.site_separation.get_separation_rules()
+    logger.info(f"{len(rules_settings['rules'])} existing rules will be removed and replaced by the {len(new_rules_json)} new rules from {ipf_client.base_url}")
+    if typer.confirm(
+        "Do you want to continue?",
+        default=True,
+    ):
+        rules_settings["rules"] = new_rules_json
+        patch_request = ipf_client.patch(url="/settings",json={"siteSeparation": rules_settings})
+        
+        if patch_request.status_code == 200:
+            logger.success(f"The rules from the file {file_str} are now applied to {ipf_client.base_url}")
+        else:
+            logger.warning(f"Failed to update the rules: {patch_request.text}")
+            return False
+        return True
+    else:
+        logger.info("Update cancelled by user.")
+        raise typer.Abort()
+
