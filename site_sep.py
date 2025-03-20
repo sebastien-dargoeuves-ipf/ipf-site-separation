@@ -1,13 +1,18 @@
 import os
+import sys
 from typing import List
 
 import typer
+from enum import Enum
+from typing_extensions import Annotated
 from loguru import logger
 
 from modules.f_ipf import (
     f_ipf_catch_all,
     f_ipf_report_site_sep,
     f_ipf_subnet,
+    f_ipf_rules_collect, # noqa: F401
+    f_ipf_rules_update, # noqa: F401
     f_push_attribute_from_file,
 )
 from modules.f_snow import f_snow_site_sep
@@ -19,6 +24,9 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
 )
 
+class rulesActions(str, Enum):
+    collect = "collect"
+    update = "update"
 
 @app.callback()
 def logging_configuration():
@@ -43,6 +51,7 @@ def logging_configuration():
         compression="tar.gz",
     )
     logger.info("---- NEW EXECUTION OF SCRIPT ----")
+    logger.info(f"IPF_URL: {settings.IPF_URL} | IPF_SNAPSHOT_ID: {settings.IPF_SNAPSHOT_ID}\n")
 
 
 @app.command("snow", help="Build Site Separation using ServiceNow data.")
@@ -160,6 +169,43 @@ def push(
         logger.info("'Push Site Separation from file' task completed")
     else:
         logger.warning("'Push Site Separation from file' task failed")
+
+
+@app.command("rules", help="Get or Update the site separation Rules")
+def rules(
+    action: Annotated[rulesActions, typer.Argument(
+        case_sensitive=False,
+        help=f"Action to perform: {rulesActions._member_names_}"
+        )
+    ] = rulesActions.collect,
+    file_str: Annotated[str, typer.Option(
+        "--file",
+        "-f",
+        help="File to (read from | write to) the site separation rules.",
+    )] = "site_separation_rules.csv",
+):
+    """
+    Collect the site separation rules from IP Fabric.
+    or
+    Push the site separation rules based on a CSV file.
+    Args:
+        action: The action to perform: collect or update
+        input_file: A file containing the new site separation rules to apply.
+        output_file: A file containing the current site separation rules.
+    """
+
+    # Check if the action has a valid function, and call it, otherwise raise an error
+    action_method = getattr(sys.modules[__name__], f'f_ipf_rules_{action}', None)
+    if callable(action_method):
+        logger.info(f"Let's '{action}' the site separation rules...")
+        if action_method(settings=settings, file_str=file_str):
+            logger.info(f"'Rules {action}' task completed")
+        else:
+            logger.warning(f"'Rules {action}' task failed")
+    else:
+        logger.error(f"The function `f_ipf_rules_{action}` does not exist...")
+        raise typer.Exit(code=1)
+
 
 
 @app.command("report", help="Create a report to find potential gaps in the Site Separation.")

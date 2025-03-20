@@ -7,6 +7,7 @@ This script provides a command-line interface (CLI) to help manage the Site Sepa
 3. `subnet`: This command uses a provided JSON file containing a list of dictionaries in the format `[{'subnet': 'siteName'}, ...]`. The site separation is then performed based on the match between the device login IP and the subnets from the JSON file.
 4. `push`: This command takes a generated file or a manually created site separation file with the correct structure and pushes the site separation information to IP Fabric.
 5. `report`: This command generates a report to help identify potential gaps in the site separation. By default, the report assigns the management subnet based on the `managedIP` table and the `loginIP` of each device, and then checks all devices within each subnet to create the `matchingSites` column. The report also offers options to perform hostname-based and connectivity matrix-based lookups to refine the site separation suggestions.
+6. `rules`: Allows you to either collect all the SiteSeparation rules from IP Fabric or push the rules to IP Fabric. The rules are collected as a CSV file, which can be used to update the rules in IP Fabric.
 
 ## Requirements
 
@@ -33,26 +34,6 @@ This script provides a command-line interface (CLI) to help manage the Site Sepa
 
     ```bash
     cp .env.sample .env
-    ```
-
-### Offline installation
-
-If you are installing the script on a machine that does not have internet access, you can use the following steps:
-
-1. Download the zip file for the repository from a connected device (Clone > Download ZIP)
-2. Copy the downloaded file to the offline machine (scp...)
-3. Unzip the file on the offline machine, and go to the directory
-4. Uncomment the line with the matching version of your IP Fabric instance in the `requirements.txt` file
-
-    ```bash
-    # ipfabric~=6.10.0
-    ipfabric~=6.8.0
-    ```
-
-5. From this offline machine, you can now install the dependencies:
-
-    ```bash
-    pip install --no-index --find-links=packages/ -r requirements.txt
     ```
 
 ## `snow` - Build Site Separation using ServiceNow data
