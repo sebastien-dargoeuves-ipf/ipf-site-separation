@@ -2,6 +2,7 @@ import ipaddress
 import json
 import os
 import sys
+import uuid
 from typing import Union
 
 import numpy as np
@@ -186,12 +187,27 @@ def validate_subnet_data(subnet_data: json) -> bool:
     return True
 
 
-def file_to_json(input: typer.FileText) -> json:
-    try:
-        output = json.load(input)
-    except Exception as e:
-        logger.error(f"Error loading file `{input}`, not a valid json. Error: {e}")
-        sys.exit()
+def file_to_json(input: Union[str, typer.FileText]) -> json:
+    if isinstance(input, str) and input.endswith(".csv"):
+        try:
+            df = pd.read_csv(input, na_filter=True)
+            logger.info("File read successfully.")
+            # Replace empty values with None
+            df = df.replace({np.nan: None})
+            # Generate IDs if empty
+            df['id'] = [str(uuid.uuid4()) if pd.isna(id_val) or id_val == '' else id_val for id_val in df['id']]
+            # Convert the DataFrame to a list of dictionaries
+            output = df.to_dict(orient="records")  # This will be a Python list of dictionaries
+            # output = df.where(pd.notnull(df), None).to_dict(orient="records")  # Replace NaN with None
+        except ValueError as e:
+            logger.error(f"Error reading the JSON file: {e}")
+            raise SystemExit(1)  # Exit if there is an error reading the JSON
+    elif isinstance(input, typer.FileText):
+        try:
+            output = json.load(input)
+        except Exception as e:
+            logger.error(f"Error loading file `{input}`, not a valid json. Error: {e}")
+            sys.exit()
     return output
 
 
