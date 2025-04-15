@@ -327,36 +327,3 @@ def read_site_sep_file(filename, update_only: bool = False) -> Union[dict, bool]
         logger.error(f"Error transforming file `{filename}` to dict. Error: {e}")
         sys.exit()
 
-def read_subnet_source_file(filename, update_only: bool = False) -> Union[dict, bool]:
-    """
-    Reads a CSV or JSON file using pandas and returns the resulting DataFrame.
-
-    Args:
-        filename: The name of the CSV file to be read.
-
-    Returns:
-        A pandas DataFrame representing the data in the CSV file.
-    """
-    try:
-        if filename.name.endswith(".csv"):
-            df = pd.read_csv(filename.name)
-            df.replace({np.nan: None}, inplace=True)
-        elif filename.name.endswith(".xlsx"):
-            df = pd.read_excel(filename.name)
-            df.replace({np.nan: None}, inplace=True)
-        else:
-            logger.error(f"Invalid file format for file `{filename.name}`. Please provide a CSV or Excel file.")
-            sys.exit()
-    except Exception as e:
-        logger.error(f"Error reading file `{filename}`. Error: {e}")
-        sys.exit()
-    try:
-        if update_only:
-            logger.info(f"UPDATE_ONLY: previously matching entries will be removed (from {len(df)} entries)")
-            df.drop(df[df["final vs original"] == "same as original"].index, inplace=True)
-        result = df.to_dict(orient="records")
-        logger.info(f"File `{filename.name}` loaded ({len(df)} entries)")
-        return result
-    except Exception as e:
-        logger.error(f"Error transforming file `{filename}` to dict. Error: {e}")
-        sys.exit()
