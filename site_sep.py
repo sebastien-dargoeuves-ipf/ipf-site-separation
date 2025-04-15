@@ -95,11 +95,11 @@ def catch_all_cleanup(
         logger.warning("'catch_all' task failed")
 
 
-@app.command("subnet", help="Build Site Separation based on Subnet data provided in a json file.")
+@app.command("subnet", help="Build Site Separation based on Subnet data provided in a json/csv file.")
 def subnet(
     subnet_source: typer.FileText = typer.Argument(
         ...,
-        help="The file containing the subnet information: [{name: 'site1', subnet: '1.1.1.0/24'}, ...]",
+        help="The json/csv file containing the subnet information: [{value: 'site1', subnet: '1.1.1.0/24'}, ...]",
     ),
     attribute_to_update: str = typer.Option(
         "siteName",
@@ -116,7 +116,7 @@ def subnet(
     Cleans up devices with the _catch_all_ site in IP Fabric by updating their siteName attribute in IP Fabric.
 
     Args:
-        subnet_source.json: A file containing the information about all subnets and their matching siteName.
+        subnet_source: A json/csv file containing the information about all subnets and their matching siteName.
     """
 
     if f_ipf_subnet(
