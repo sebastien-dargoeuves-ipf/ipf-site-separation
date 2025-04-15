@@ -457,15 +457,6 @@ def f_ipf_rules_update(
     new_rules_json = file_to_json(file_str)
 
     ipf_client = initiate_ipf(settings)
-    # pre_7_version = version.parse(ipf_client.os_version) < version.parse("7.0.0")
-    # logger.info("SiteSeparation rules `regexCloudResourceId` are not supported in versions below 7.0.0")
-    # logger.info("Checking and updating the rules...")
-    # for rule in new_rules_json[:]:  # Create a copy of the list to safely modify during iteration
-    #     # Only regexCloudResourceId should use the applyToCloudInstances attribute, if equal or above 7.0
-    #     if rule.get('type') == 'regexCloudResourceId' and pre_7_version:
-    #         new_rules_json.remove(rule)
-    #     elif rule.get('type') == 'regexHostname':
-    #         rule.pop("applyToCloudInstances", None)
 
     # Check if the version is below 7.0.0
     is_pre_7_version = version.parse(ipf_client.os_version) < version.parse("7.0.0")
