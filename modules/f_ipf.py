@@ -27,7 +27,6 @@ from packaging import version
 from rich.console import Console
 from rich.progress import track
 
-# from ipdb import set_trace as debug
 ATTRIBUTES_UPDATE_MAX = 10000
 
 console = Console()
@@ -458,15 +457,30 @@ def f_ipf_rules_update(
     new_rules_json = file_to_json(file_str)
 
     ipf_client = initiate_ipf(settings)
-    if version.parse(ipf_client.os_version) < version.parse("7.0.0"):
-        logger.info("SiteSeparation rules with `applyToCloudInstances` attribute are not supported in versions below 7.0.0")
-        logger.info("Checking and updating the rules...")
-        for rule in new_rules_json[:]:  # Create a copy of the list to safely modify during iteration
-            if rule.get('type') == 'regexCloudResourceId':
-                new_rules_json.remove(rule)
-            else:
-                rule.pop("applyToCloudInstances", None)
+    # pre_7_version = version.parse(ipf_client.os_version) < version.parse("7.0.0")
+    # logger.info("SiteSeparation rules `regexCloudResourceId` are not supported in versions below 7.0.0")
+    # logger.info("Checking and updating the rules...")
+    # for rule in new_rules_json[:]:  # Create a copy of the list to safely modify during iteration
+    #     # Only regexCloudResourceId should use the applyToCloudInstances attribute, if equal or above 7.0
+    #     if rule.get('type') == 'regexCloudResourceId' and pre_7_version:
+    #         new_rules_json.remove(rule)
+    #     elif rule.get('type') == 'regexHostname':
+    #         rule.pop("applyToCloudInstances", None)
 
+    # Check if the version is below 7.0.0
+    is_pre_7_version = version.parse(ipf_client.os_version) < version.parse("7.0.0")
+    logger.info("SiteSeparation rules `regexCloudResourceId` are not supported in versions below 7.0.0")
+    logger.info("Checking and updating the rules...")
+    # Filter and modify rules
+    filtered_rules = []
+    for rule in new_rules_json:
+        # Remove regexCloudResourceId rules for versions below 7.0.0
+        if rule.get('type') == 'regexCloudResourceId' and is_pre_7_version:
+            continue
+        # Remove applyToCloudInstances key/value for regexHostname rules
+        if rule.get('type') == 'regexHostname':
+            rule.pop("applyToCloudInstances", None)
+        filtered_rules.append(rule)
 
     rules_settings = ipf_client.settings.site_separation.get_separation_rules()
     logger.info(f"{len(rules_settings['rules'])} existing rules will be removed and replaced by the {len(new_rules_json)} new rules from {ipf_client.base_url}")
@@ -476,8 +490,6 @@ def f_ipf_rules_update(
     ):
         rules_settings["rules"] = new_rules_json
         patch_request = ipf_client.patch(url="/settings",json={"siteSeparation": rules_settings})
-        # FIXME: check if the request was successful
-        from ipdb import set_trace as debug; debug()
         if patch_request.status_code == 200:
             logger.success(f"The rules from the file {file_str} are now applied to {ipf_client.base_url}")
         else:
