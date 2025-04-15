@@ -2,6 +2,7 @@
 IP Fabric functions
 """
 
+import io
 import json
 import os
 import sys
@@ -274,7 +275,7 @@ def f_ipf_catch_all(settings: Settings, update_ipf: bool):
     return True
 
 
-def f_ipf_subnet(settings: Settings, subnet_file: json, attribute_to_update: str, update_ipf: bool):
+def f_ipf_subnet(settings: Settings, subnet_file: io.TextIOWrapper, attribute_to_update: str, update_ipf: bool):
     subnet_data = file_to_json(subnet_file)
     if not validate_subnet_data(subnet_data):
         return False
@@ -475,7 +476,8 @@ def f_ipf_rules_update(
     ):
         rules_settings["rules"] = new_rules_json
         patch_request = ipf_client.patch(url="/settings",json={"siteSeparation": rules_settings})
-        
+        # FIXME: check if the request was successful
+        from ipdb import set_trace as debug; debug()
         if patch_request.status_code == 200:
             logger.success(f"The rules from the file {file_str} are now applied to {ipf_client.base_url}")
         else:
