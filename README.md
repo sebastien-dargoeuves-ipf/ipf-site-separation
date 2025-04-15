@@ -74,7 +74,7 @@ python site_sep.py catch_all --update-ipf
 
 This command will update the IP Fabric data with the corrected site separation information for the devices that were previously assigned to the `CATCH_ALL` site.
 
-## `subnet` - Build Attributes (by default siteName) based on Subnet Data Provided in a JSON File
+## `subnet` - Build Attributes (by default siteName) based on Subnet Data Provided in a JSON/CSV File
 
 The `subnet` option allows you to search for all devices with a login IP and assign them an attribute based on subnet information provided in a source file.
 By default, 'siteName' is the attribute that will be updated.
@@ -82,6 +82,8 @@ By default, 'siteName' is the attribute that will be updated.
 ```bash
 python site_sep.py subnet <name-of-subnet-file.json>
 python site_sep.py subnet <name-of-subnet-file.json> -a <attribute_key>
+python site_sep.py subnet <name-of-subnet-file.csv>
+python site_sep.py subnet <name-of-subnet-file.csv> -a <attribute_key>
 ```
 
 In dry run mode, the script saves the results to `update_attributes_from_subnet.csv`.
@@ -89,10 +91,10 @@ In dry run mode, the script saves the results to `update_attributes_from_subnet.
 To update the global and/or local attributes in IP Fabric with the matched device information, use the following command:
 
 ```bash
-python site_sep.py subnet <name-of-subnet-file.json> -a <attribute_key> --update-ipf -a
+python site_sep.py subnet <name-of-subnet-file.json/csv> -a <attribute_key> --update-ipf -a
 ```
 
-The source file needs to be constructed like this, with the `value` you want to give to the `attribute_key` specified in the command above:
+The JSON source file needs to be constructed like this, with the `value` you want to give to the `attribute_key` specified in the command above:
 
 ```json
 [
@@ -109,6 +111,15 @@ The source file needs to be constructed like this, with the `value` you want to 
         "subnet": "10.194.56.96/28"
     }
 ]
+```
+
+Here is an example of a CSV file that can be used as input:
+
+```csv
+value,subnet
+SiteA,10.194.56.64/28
+SiteB,10.194.56.80/28
+SiteC,10.194.56.96/28
 ```
 
 ## `push` - Update Attributes Based on a CSV or Excel File

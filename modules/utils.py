@@ -1,3 +1,4 @@
+import io
 import ipaddress
 import json
 import os
@@ -188,26 +189,34 @@ def validate_subnet_data(subnet_data: json) -> bool:
 
 
 def file_to_json(input: Union[str, typer.FileText]) -> json:
-    if isinstance(input, str) and input.endswith(".csv"):
+    """
+    Reads a JSON or CSV file and converts it to a list of dictionaries.
+    If the input is a CSV file, it will be read using pandas and converted to a list of dictionaries.
+    If the input is a JSON file, it will be read using the json module.
+    If the input is a string, it will be treated as a filename.
+    """
+    if isinstance(input, str) and input.endswith(".csv") or isinstance(input, io.TextIOWrapper) and input.name.endswith(".csv"):
+        input_filename = input.name if isinstance(input, io.TextIOWrapper) else input
         try:
-            df = pd.read_csv(input, na_filter=True)
+            df = pd.read_csv(input_filename, na_filter=True)
             logger.info("File read successfully.")
             # Replace empty values with None
             df = df.replace({np.nan: None})
-            # Generate IDs if empty
-            df['id'] = [str(uuid.uuid4()) if pd.isna(id_val) or id_val == '' else id_val for id_val in df['id']]
+            # Generate IDs if empty, only if the column id exists! (for regex_rules)
+            if "id" in df.columns:
+                df['id'] = [str(uuid.uuid4()) if pd.isna(id_val) or id_val == '' else id_val for id_val in df['id']]
             # Convert the DataFrame to a list of dictionaries
             output = df.to_dict(orient="records")  # This will be a Python list of dictionaries
             # output = df.where(pd.notnull(df), None).to_dict(orient="records")  # Replace NaN with None
         except ValueError as e:
             logger.error(f"Error reading the JSON file: {e}")
             raise SystemExit(1)  # Exit if there is an error reading the JSON
-    elif isinstance(input, typer.FileText):
+    elif isinstance(input, io.TextIOWrapper) and input.name.endswith(".json"):
         try:
             output = json.load(input)
         except Exception as e:
             logger.error(f"Error loading file `{input}`, not a valid json. Error: {e}")
-            sys.exit()
+            sys.exit(1)
     return output
 
 
@@ -317,3 +326,4 @@ def read_site_sep_file(filename, update_only: bool = False) -> Union[dict, bool]
     except Exception as e:
         logger.error(f"Error transforming file `{filename}` to dict. Error: {e}")
         sys.exit()
+
