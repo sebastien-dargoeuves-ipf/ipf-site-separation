@@ -217,7 +217,6 @@ def file_to_json(input: Union[str, typer.FileText]) -> json:
         except Exception as e:
             logger.error(f"Error loading file `{input}`, not a valid json. Error: {e}")
             sys.exit(1)
-    from ipdb import set_trace as debug; debug()
     return output
 
 
