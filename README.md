@@ -91,7 +91,9 @@ In dry run mode, the script saves the results to `update_attributes_from_subnet.
 To update the global and/or local attributes in IP Fabric with the matched device information, use the following command:
 
 ```bash
-python site_sep.py subnet <name-of-subnet-file.json/csv> -a <attribute_key> --update-ipf -a
+python site_sep.py subnet <name-of-subnet-file.json/csv> --update-ipf
+# or specify the attribute to update
+python site_sep.py subnet <name-of-subnet-file.json/csv> -a <attribute_key> --update-ipf
 ```
 
 The JSON source file needs to be constructed like this, with the `value` you want to give to the `attribute_key` specified in the command above:
